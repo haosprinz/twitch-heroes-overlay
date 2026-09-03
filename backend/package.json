@@ -1,0 +1,35 @@
+{
+  "name": "twitch-heroes-backend",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Twitch Heroes Overlay — API, SQLite, Socket.io, Twitch EventSub",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "start": "tsx src/server.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@twurple/api": "^7.3.0",
+    "@twurple/auth": "^7.3.0",
+    "@twurple/eventsub-ws": "^7.3.0",
+    "better-sqlite3": "^11.10.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.5.0",
+    "express": "^5.1.0",
+    "multer": "^2.0.0",
+    "socket.io": "^4.8.1"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^9.6.0",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/multer": "^2.2.0",
+    "@types/node": "^26.4.1",
+    "tsx": "^4.23.13",
+    "typescript": "^7.0.2"
+  }
+}

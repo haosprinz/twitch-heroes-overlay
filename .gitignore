@@ -1,0 +1,22 @@
+# Dependencies
+node_modules/
+
+# Secrets — keep example env files
+.env
+.env.*
+!.env.example
+!**/.env.example
+
+# Build
+dist/
+
+# Logs / OS
+*.log
+.DS_Store
+Thumbs.db
+
+# Local SQLite and uploaded GIFs
+backend/data/*.sqlite
+backend/data/*.sqlite-*
+backend/uploads/gifs/*
+!backend/uploads/gifs/.gitkeep

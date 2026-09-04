@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { listChatters, getChatterWithHero } from "../models/Chatter.js";
+import { deleteChatter, listChatters, getChatterWithHero } from "../models/Chatter.js";
 import { emitHeroChange, emitToClients } from "../services/chatService.js";
 import {
   assignHero,
@@ -105,6 +105,23 @@ router.delete("/:id/hero", (req, res) => {
   res.json({
     success: true,
     chatter: { id: result.chatter.id, heroId: null },
+  });
+});
+
+router.delete("/:id", (req, res) => {
+  const chatter = deleteChatter(Number(req.params.id));
+  if (!chatter) {
+    res.status(404).json({ success: false, error: "Chatter not found" });
+    return;
+  }
+
+  emitToClients("chatter_deleted", {
+    chatterId: chatter.id,
+    timestamp: Date.now(),
+  });
+  res.json({
+    success: true,
+    chatter: { id: chatter.id },
   });
 });
 

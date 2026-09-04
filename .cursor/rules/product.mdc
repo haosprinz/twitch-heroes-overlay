@@ -1,0 +1,27 @@
+---
+description: Product goal and two-project layout for Twitch Heroes Overlay
+alwaysApply: true
+---
+
+# Twitch Heroes Overlay
+
+Источник правды: [PLAN.md](PLAN.md). Не меняй контракты API, сокетов и команд чата без явного запроса.
+
+## Что строим
+
+Локальное приложение для одного стримера: герои пользователей в OBS overlay, админка героев, таблица пользователей. Чат — Twitch EventSub, real-time — Socket.io.
+
+## Два независимых проекта
+
+- `backend/` — Node.js, TypeScript, Express, SQLite, Socket.io, Twurple. Запуск: `npm run dev` → `:3000`
+- `frontend/` — Vue 3, TypeScript, Vuetify 3, Pinia. Запуск: `npm run dev` → `:5173`
+- Общей точки запуска нет: нет корневого `package.json`, `concurrently` и docker-compose
+
+## Жёсткие решения
+
+- Один стример, без защиты админки
+- Гифки локально в `backend/uploads/gifs/`
+- Новым пользователям — случайный герой
+- Ответы API: `{ success, ... }`
+
+Сверяйся с текущим этапом в PLAN.md перед новой работой.

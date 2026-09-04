@@ -9,7 +9,7 @@ import type { Chatter } from "@/types/chatter";
 
 const chatterStore = useChatterStore();
 const heroStore = useHeroStore();
-const { fetchChatters, assignHero, removeHero } = useChatters();
+const { fetchChatters, assignHero, deleteChatter } = useChatters();
 const { fetchHeroes } = useHeroes();
 useWebSocket();
 
@@ -19,6 +19,7 @@ const limit = ref(25);
 const loading = ref(false);
 const error = ref("");
 const assignTarget = ref<Chatter | null>(null);
+const confirmDelete = ref<Chatter | null>(null);
 const selectedHeroId = ref<number | null>(null);
 const saving = ref(false);
 
@@ -40,7 +41,7 @@ async function load() {
     const result = await fetchChatters(page.value, limit.value, search.value);
     chatterStore.setChatters(result.chatters, result.pagination);
   } catch (err) {
-    error.value = err instanceof Error ? err.message : "Не удалось загрузить чаттеров";
+    error.value = err instanceof Error ? err.message : "Не удалось загрузить пользователей";
   } finally {
     loading.value = false;
   }
@@ -71,12 +72,16 @@ async function saveAssign() {
   }
 }
 
-async function clearHero(chatter: Chatter) {
+async function removeUser(chatter: Chatter) {
+  saving.value = true;
   try {
-    await removeHero(chatter.id);
+    await deleteChatter(chatter.id);
+    confirmDelete.value = null;
     await load();
   } catch (err) {
-    error.value = err instanceof Error ? err.message : "Не удалось убрать героя";
+    error.value = err instanceof Error ? err.message : "Не удалось удалить пользователя";
+  } finally {
+    saving.value = false;
   }
 }
 
@@ -104,7 +109,7 @@ onMounted(async () => {
 
 <template>
   <v-container>
-    <h1 class="text-h4 mb-4">Чаттеры</h1>
+    <h1 class="text-h4 mb-4">Пользователи</h1>
     <v-text-field
       v-model="search"
       label="Поиск по имени или логину"
@@ -137,12 +142,12 @@ onMounted(async () => {
       </template>
       <template #item.actions="{ item }">
         <v-btn size="small" variant="text" @click="openAssign(item)">Герой</v-btn>
-        <v-btn v-if="item.heroId" size="small" variant="text" color="error" @click="clearHero(item)">
-          Убрать
+        <v-btn size="small" variant="text" color="error" @click="confirmDelete = item">
+          Удалить
         </v-btn>
       </template>
       <template #no-data>
-        Пока нет чаттеров. Данные появятся после EventSub.
+        Пока нет пользователей. Данные появятся после EventSub.
       </template>
     </v-data-table-server>
 
@@ -166,6 +171,19 @@ onMounted(async () => {
           <v-btn color="primary" :loading="saving" :disabled="!selectedHeroId" @click="saveAssign">
             Назначить
           </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+    <v-dialog :model-value="Boolean(confirmDelete)" max-width="420" @update:model-value="(open) => { if (!open) confirmDelete = null }">
+      <v-card v-if="confirmDelete">
+        <v-card-title>Удалить пользователя?</v-card-title>
+        <v-card-text>
+          {{ confirmDelete.displayName || confirmDelete.username }} будет удалён вместе с историей сообщений и пропадёт с оверлея.
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn variant="text" @click="confirmDelete = null">Отмена</v-btn>
+          <v-btn color="error" :loading="saving" @click="removeUser(confirmDelete)">Удалить</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>

@@ -33,7 +33,7 @@ function formatTime(value: number) {
         <thead>
           <tr>
             <th>Время</th>
-            <th>Ник</th>
+            <th>Пользователь</th>
             <th>Текст</th>
             <th>Герой</th>
             <th>Длительность</th>

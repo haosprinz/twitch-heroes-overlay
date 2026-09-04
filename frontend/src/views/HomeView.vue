@@ -39,6 +39,18 @@ const eventSubLabel = computed(() => {
   }
 });
 
+const chatFeed = computed(() =>
+  chatStore.recentMessages.filter((item) => item.source !== "test"),
+);
+
+function formatMessageDate(timestamp: number) {
+  return new Date(timestamp).toLocaleDateString("ru-RU");
+}
+
+function formatMessageTime(timestamp: number) {
+  return new Date(timestamp).toLocaleTimeString("ru-RU");
+}
+
 function applyAuthQuery() {
   const auth = String(route.query.auth || "");
   if (auth === "success") {
@@ -72,7 +84,7 @@ watch(
   <v-container class="py-12">
     <h1 class="text-h3 mb-4">Twitch Heroes Overlay</h1>
     <p class="text-body-1 mb-6">
-      Overlay для OBS, админка героев и таблица чаттеров. Чат подключается через Twitch EventSub.
+      Overlay для OBS, админка героев и таблица пользователей. Чат подключается через Twitch EventSub.
     </p>
 
     <v-alert v-if="alert" :type="alert.type" class="mb-6" closable @click:close="alert = null">
@@ -89,7 +101,7 @@ watch(
 
     <v-row v-if="appStore.stats" class="mb-6" dense>
       <v-col cols="6" md="3">
-        <v-card variant="tonal"><v-card-text>Чаттеры: {{ appStore.stats.totalChatters }}</v-card-text></v-card>
+        <v-card variant="tonal"><v-card-text>Пользователи: {{ appStore.stats.totalChatters }}</v-card-text></v-card>
       </v-col>
       <v-col cols="6" md="3">
         <v-card variant="tonal"><v-card-text>Герои: {{ appStore.stats.totalHeroes }}</v-card-text></v-card>
@@ -161,13 +173,20 @@ watch(
     <v-card class="mt-8">
       <v-card-title>Последние сообщения чата</v-card-title>
       <v-card-text>
-        <v-list v-if="chatStore.recentMessages.length">
+        <v-list v-if="chatFeed.length">
           <v-list-item
-            v-for="item in chatStore.recentMessages"
+            v-for="item in chatFeed"
             :key="`${item.chatterId}-${item.timestamp}`"
-            :title="item.username"
-            :subtitle="item.message"
-          />
+          >
+            <v-list-item-title>
+              {{ item.username }}
+              <span class="text-medium-emphasis font-weight-regular ml-2">
+                {{ formatMessageDate(item.timestamp) }}
+                {{ formatMessageTime(item.timestamp) }}
+              </span>
+            </v-list-item-title>
+            <v-list-item-subtitle class="text-wrap">{{ item.message }}</v-list-item-subtitle>
+          </v-list-item>
         </v-list>
         <p v-else class="text-medium-emphasis">
           Сообщений пока нет. После входа через Twitch напишите что-нибудь в чат канала.

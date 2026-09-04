@@ -2,15 +2,21 @@ import { listHeroes } from "../models/Hero.js";
 import { assignHeroByName, getAssignedChatter } from "./heroAssignment.js";
 import type { ChatterRow, CommandResult } from "../types.js";
 
-function parseCommand(text: string): { name: string; argument: string } | null {
+export function parseCommand(
+  text: string,
+): { name: string; argument: string } | null {
   const match = String(text || "")
     .trim()
-    .match(/^\/(\S+)(?:\s+(.*))?$/);
+    .match(/^\\(\S+)(?:\s+(.*))?$/);
   if (!match) return null;
   return {
     name: (match[1] ?? "").toLowerCase(),
     argument: (match[2] || "").trim(),
   };
+}
+
+export function isCommandText(text: string): boolean {
+  return parseCommand(text) !== null;
 }
 
 function listHeroNames(): string {
@@ -43,7 +49,7 @@ export function handleCommand({
       return {
         handled: true,
         type: "error",
-        reply: `❌ Герой "${parsed.argument}" не найден. Используйте /heroes для списка`,
+        reply: `❌ Герой "${parsed.argument}" не найден. Используйте \\heroes для списка`,
       };
     }
 
@@ -64,7 +70,7 @@ export function handleCommand({
         handled: true,
         type: "info",
         reply:
-          "ℹ️ У вас нет героя. Напишите /heroes для списка доступных героев",
+          "ℹ️ У вас нет героя. Напишите \\heroes для списка доступных героев",
       };
     }
     return {
@@ -79,7 +85,7 @@ export function handleCommand({
       handled: true,
       type: "info",
       reply:
-        "📖 Доступные команды:\n• /heroes - показать список героев\n• /heroes имя - выбрать героя\n• /hero - показать вашего героя\n• /help - показать эту справку",
+        "📖 Доступные команды:\n• \\heroes - показать список героев\n• \\heroes имя - выбрать героя\n• \\hero - показать вашего героя\n• \\help - показать эту справку",
     };
   }
 

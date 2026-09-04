@@ -23,7 +23,11 @@ import { restoreAuthFromDb } from "./services/twitchService.js";
 import { getUploadDir } from "./config/upload.js";
 
 const PORT = Number(process.env.PORT || 3000);
+const HOST = process.env.HOST || "0.0.0.0";
 const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5173";
+const CORS_ORIGINS = [
+  ...new Set([FRONTEND_URL, "http://localhost:5173", "http://127.0.0.1:5173"]),
+];
 const uploadPath = getUploadDir();
 
 fs.mkdirSync(uploadPath, { recursive: true });
@@ -32,13 +36,13 @@ getDb();
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
-  cors: { origin: FRONTEND_URL },
+  cors: { origin: CORS_ORIGINS },
 });
 
 createSocket(io);
 attachSocket(io);
 
-app.use(cors({ origin: FRONTEND_URL }));
+app.use(cors({ origin: CORS_ORIGINS }));
 app.use(express.json());
 app.use(logger);
 app.use("/uploads/gifs", express.static(uploadPath));
@@ -60,8 +64,8 @@ app.use("/api/upload", uploadRoutes);
 
 app.use(errorHandler);
 
-server.listen(PORT, async () => {
-  console.log(`Backend listening on http://localhost:${PORT}`);
+server.listen(PORT, HOST, async () => {
+  console.log(`Backend listening on http://${HOST}:${PORT}`);
   const restored = await restoreAuthFromDb();
   if (restored) {
     await startChatListener();

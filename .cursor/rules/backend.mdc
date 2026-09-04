@@ -1,0 +1,16 @@
+---
+description: Backend conventions for Twitch Heroes Overlay
+globs: backend/**
+alwaysApply: false
+---
+
+# Backend
+
+Стек и контракты — в [PLAN.md](PLAN.md): TypeScript, Express, better-sqlite3, Socket.io, @twurple, multer.
+
+- Точка входа: `backend/src/server.ts`, порт `3000`
+- Схема таблиц и имена колонок — как в PLAN.md, без самовольных полей
+- REST: `/api/auth`, `/api/heroes`, `/api/chatters`, `/api/stats`, `/api/settings`, `/api/upload`
+- Ответ всегда `{ success: true|false, ... }`; ошибки через `errorHandler`
+- Socket-события (`new_message`, `hero_assigned`, `test_message`, …) — имена из плана, без переименований
+- Токены Twitch хранятся в таблице `settings`, не в git и не в клиенте

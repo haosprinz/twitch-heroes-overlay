@@ -112,7 +112,7 @@ async function confirmRemove() {
       <v-card v-if="confirmDelete">
         <v-card-title>Удалить героя?</v-card-title>
         <v-card-text>
-          {{ confirmDelete.name }} будет удалён, гифка сотрётся, у чаттеров герой снимется.
+          {{ confirmDelete.name }} будет удалён, гифка сотрётся, у пользователей герой снимется.
         </v-card-text>
         <v-card-actions>
           <v-spacer />

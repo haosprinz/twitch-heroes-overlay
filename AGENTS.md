@@ -4,7 +4,7 @@
 
 ## Что это
 
-Локальное приложение для **одного стримера**: герои чаттеров в OBS overlay, админка героев, таблица чаттеров. Сообщения чата приходят через Twitch EventSub, UI обновляется через Socket.io.
+Локальное приложение для **одного стримера**: герои пользователей в OBS overlay, админка героев, таблица пользователей. Сообщения чата приходят через Twitch EventSub, UI обновляется через Socket.io.
 
 ## Два независимых проекта
 
@@ -15,13 +15,13 @@
 | [`backend/`](./backend/) | Node.js, TypeScript, Express, SQLite, Socket.io, Twurple | `npm run dev` | http://localhost:3000 |
 | [`frontend/`](./frontend/) | Vue 3, TypeScript, Vuetify 3, Pinia | `npm run dev` | http://localhost:5173 |
 
-Страницы frontend: `/overlay` (OBS), `/admin` (герои), `/test` (тестирование), `/chatters` (чаттеры).
+Страницы frontend: `/overlay` (OBS), `/admin` (герои), `/test` (тестирование), `/chatters` (пользователи).
 
 ## Жёсткие решения плана
 
 - Один стример, без защиты админки
 - Гифки хранятся локально в `backend/uploads/gifs/`
-- Новым чаттерам назначается случайный герой
+- Новым пользователям назначается случайный герой
 - Ответы API в формате `{ success, ... }`
 - Имена Socket-событий и чат-команд — только из PLAN.md
 

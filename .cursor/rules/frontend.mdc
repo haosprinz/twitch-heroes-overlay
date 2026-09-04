@@ -1,0 +1,16 @@
+---
+description: Frontend conventions for Twitch Heroes Overlay
+globs: frontend/**
+alwaysApply: false
+---
+
+# Frontend
+
+Стек и экраны — в [PLAN.md](PLAN.md): Vue 3, TypeScript, Vuetify 3, Pinia, Vue Router, socket.io-client.
+
+- Точка входа: `frontend/src/main.ts`, порт `5173`
+- Маршруты: `/overlay`, `/admin`, `/test`, `/chatters`, callback OAuth
+- Overlay: прозрачный фон для OBS, герои + облако текста, без админ-layout
+- API и сокеты через `VITE_API_URL` / `VITE_WS_URL`, не хардкодить хост
+- Типы героя, пользователя и ответов API держать в `src/types/` в соответствии с PLAN.md
+- Админка без авторизации (по плану)

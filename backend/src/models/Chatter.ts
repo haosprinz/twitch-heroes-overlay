@@ -109,3 +109,16 @@ export function countActiveChattersToday(): number {
     .get() as { total: number };
   return row.total;
 }
+
+export function deleteChatter(id: number): ChatterRow | undefined {
+  const chatter = getChatterById(id);
+  if (!chatter) return undefined;
+  const db = getDb();
+  const tx = db.transaction(() => {
+    db.prepare("DELETE FROM messages WHERE chatter_id = ?").run(id);
+    db.prepare("DELETE FROM chatter_heroes_history WHERE chatter_id = ?").run(id);
+    db.prepare("DELETE FROM chatters WHERE id = ?").run(id);
+  });
+  tx();
+  return chatter;
+}

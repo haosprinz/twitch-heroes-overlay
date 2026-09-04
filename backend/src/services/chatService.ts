@@ -4,11 +4,8 @@ import { getTwitchConfig } from "../config/twitch.js";
 import { upsertChatterFromTwitch } from "../models/Chatter.js";
 import { insertMessage } from "../models/Message.js";
 import { setSetting } from "../models/Settings.js";
-import { handleCommand } from "./commandHandler.js";
-import {
-  assignRandomHero,
-  serializeChatter,
-} from "./heroAssignment.js";
+import { handleCommand, isCommandText } from "./commandHandler.js";
+import { assignRandomHero, serializeChatter } from "./heroAssignment.js";
 import { getApiClient, getAuthStatus } from "./twitchService.js";
 import type {
   ChatterRow,
@@ -97,7 +94,7 @@ export async function stopChatListener(): Promise<void> {
 }
 
 function isCommand(text: string): boolean {
-  return /^\s*\//.test(text);
+  return isCommandText(text);
 }
 
 async function sendChatReply(message: string, type = "info"): Promise<void> {

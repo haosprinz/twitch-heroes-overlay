@@ -1,6 +1,6 @@
 # Twitch Heroes Overlay
 
-Герои чаттеров в OBS overlay: сообщения из Twitch EventSub, облака с текстом, админка GIF-героев.
+Герои пользователей в OBS overlay: сообщения из Twitch EventSub, облака с текстом, админка GIF-героев.
 
 Полный план: [PLAN.md](./PLAN.md)
 
@@ -52,7 +52,7 @@ http://localhost:5173
 | Главная и OAuth | http://localhost:5173 |
 | Overlay для OBS | http://localhost:5173/overlay |
 | Админка героев | http://localhost:5173/admin |
-| Таблица чаттеров | http://localhost:5173/chatters |
+| Таблица пользователей | http://localhost:5173/chatters |
 | API / Socket.io | http://localhost:3000 |
 
 ## OBS
@@ -67,10 +67,12 @@ http://localhost:5173
 
 ## Команды чата
 
-- `/heroes` — список героев
-- `/heroes имя` — выбрать героя
-- `/hero` — ваш текущий герой
-- `/help` — справка
+Префикс `\` (не `/`): Twitch перехватывает slash-команды и не отдаёт их в чат. Команды не показываются в оверлее.
+
+- `\heroes` — список героев
+- `\heroes имя` — выбрать героя
+- `\hero` — ваш текущий герой
+- `\help` — справка
 
 Новому зрителю без героя назначается случайный.
 

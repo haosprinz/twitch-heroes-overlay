@@ -47,5 +47,14 @@ export function useChatters() {
     return data.chatter as { id: number; heroId: null };
   }
 
-  return { fetchChatters, assignHero, removeHero };
+  async function deleteChatter(chatterId: number) {
+    const response = await fetch(`${appStore.apiUrl}/api/chatters/${chatterId}`, {
+      method: "DELETE",
+    });
+    const data = await response.json();
+    assertOk(data, "Failed to delete chatter");
+    return data.chatter as { id: number };
+  }
+
+  return { fetchChatters, assignHero, removeHero, deleteChatter };
 }

@@ -39,7 +39,7 @@ const eventSubChipColor = computed(() => {
       <v-btn to="/" variant="text">Главная</v-btn>
       <v-btn to="/admin" variant="text">Герои</v-btn>
       <v-btn to="/test" variant="text">🧪 Тестирование</v-btn>
-      <v-btn to="/chatters" variant="text">Чаттеры</v-btn>
+      <v-btn to="/chatters" variant="text">Пользователи</v-btn>
       <v-btn to="/overlay" variant="text">Overlay</v-btn>
       <v-spacer />
       <v-chip v-if="appStore.twitchConnected" class="mr-2" variant="flat" size="small">

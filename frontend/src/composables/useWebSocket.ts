@@ -9,16 +9,19 @@ import type { Hero } from "@/types/hero";
 
 let socket: Socket | null = null;
 let refCount = 0;
+const ready = ref(false);
 
 export function useWebSocket() {
   const appStore = useAppStore();
   const heroStore = useHeroStore();
   const chatStore = useChatStore();
   const chatterStore = useChatterStore();
-  const ready = ref(false);
 
   function connect() {
-    if (socket) return socket;
+    if (socket) {
+      ready.value = socket.connected;
+      return socket;
+    }
 
     socket = io(appStore.wsUrl, {
       transports: ["websocket"],
@@ -72,6 +75,11 @@ export function useWebSocket() {
       if (payload.chatter) chatterStore.upsertChatter(payload.chatter);
     });
 
+    socket.on("chatter_deleted", (payload: { chatterId: number }) => {
+      chatterStore.removeChatter(payload.chatterId);
+      chatStore.deactivateChatter(payload.chatterId);
+    });
+
     socket.on(
       "hero_assigned",
       (payload: { chatterId: number; heroId: number; heroName: string }) => {
@@ -87,6 +95,7 @@ export function useWebSocket() {
 
     socket.on("new_message", (payload: ChatMessage) => {
       chatStore.setLastMessage(payload);
+      if (payload.source === "test") return;
       const hero = heroStore.heroes.find((item) => item.id === payload.heroId);
       chatStore.activateHero(payload, payload.duration ?? hero?.bubbleDuration ?? 5000);
       chatterStore.applyNewMessage(payload);

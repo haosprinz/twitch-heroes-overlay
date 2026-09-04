@@ -1,10 +1,14 @@
 <script setup lang="ts">
 import OverlayStage from "@/components/OverlayStage.vue";
+import type { HeroActivation } from "@/stores/chatStore";
+import type { OverlaySlot } from "@/types/overlay";
 
 const background = defineModel<"checker" | "dark">("background", { default: "checker" });
 
 defineProps<{
   idle?: boolean;
+  items: OverlaySlot[];
+  activations?: HeroActivation[];
 }>();
 </script>
 
@@ -20,7 +24,7 @@ defineProps<{
     </v-card-title>
     <v-card-text class="preview__stage-wrap">
       <div class="preview__stage" :class="`preview__stage--${background}`">
-        <OverlayStage embedded :idle="idle" />
+        <OverlayStage embedded :idle="idle" :items="items" :activations="activations" />
       </div>
     </v-card-text>
   </v-card>
@@ -42,7 +46,7 @@ defineProps<{
   position: relative;
   height: min(62vh, 720px);
   min-height: 420px;
-  overflow: hidden;
+  overflow: auto;
   border-radius: 8px;
 }
 

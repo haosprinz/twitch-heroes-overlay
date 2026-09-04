@@ -1,109 +1,170 @@
 <script setup lang="ts">
-import { onMounted, ref, watch } from "vue";
+import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import OverlayPreview from "@/components/OverlayPreview.vue";
 import TestLog, { type TestLogEntry } from "@/components/TestLog.vue";
 import TestMessageForm from "@/components/TestMessageForm.vue";
-import { useChatters } from "@/composables/useChatters";
 import { useHeroes } from "@/composables/useHeroes";
-import {
-  emitTestMessage,
-  emitTestResetOverlay,
-  useWebSocket,
-} from "@/composables/useWebSocket";
-import { useChatStore, type ChatMessage } from "@/stores/chatStore";
+import { emitTestMessage, useWebSocket } from "@/composables/useWebSocket";
+import type { HeroActivation } from "@/stores/chatStore";
 import { useHeroStore } from "@/stores/heroStore";
-import type { Chatter } from "@/types/chatter";
+import type { OverlaySlot, TestChatter } from "@/types/overlay";
 
 const LONG_TEXT =
-  "Это очень длинное тестовое сообщение для проверки переполнения пузыря на оверлее. ".repeat(6) +
+  "Это очень длинное тестовое сообщение для проверки переполнения пузыря на оверлее. ".repeat(
+    6,
+  ) +
   "Нужно убедиться, что текст не ломает вёрстку и переносится внутри облака.";
 
-const { ready } = useWebSocket();
+useWebSocket();
 const heroStore = useHeroStore();
-const chatStore = useChatStore();
 const { fetchHeroes } = useHeroes();
-const { fetchChatters } = useChatters();
 
-const text = ref("Привет, проверяю пузырь");
-const heroId = ref<number | null>(null);
-const chatterId = ref<number | null>(null);
-const chatterName = ref("tester");
-const duration = ref(5000);
 const showIdle = ref(false);
 const background = ref<"checker" | "dark">("checker");
-const sending = ref(false);
-const chatters = ref<Chatter[]>([]);
+const sendingId = ref<number | null>(null);
 const log = ref<TestLogEntry[]>([]);
+const activations = ref<HeroActivation[]>([]);
 let logSeq = 0;
+const timers = new Map<number, ReturnType<typeof setTimeout>>();
+
+const testChatters = ref<TestChatter[]>([
+  {
+    id: -1,
+    username: "Пользователь 1",
+    heroId: null,
+    text: "Привет от Пользователя 1",
+    duration: 5000,
+  },
+  {
+    id: -2,
+    username: "Пользователь 2",
+    heroId: null,
+    text: "Привет от Пользователя 2",
+    duration: 8000,
+  },
+]);
+
+const previewItems = computed<OverlaySlot[]>(() =>
+  testChatters.value.flatMap((chatter) => {
+    if (!chatter.heroId) return [];
+    const hero = heroStore.heroes.find((item) => item.id === chatter.heroId);
+    return hero ? [{ id: chatter.id, hero, username: chatter.username }] : [];
+  }),
+);
 
 function heroNameById(id: number | null | undefined) {
-  if (!id) return "случайный";
+  if (!id) return "нет героя";
   return heroStore.heroes.find((hero) => hero.id === id)?.name ?? `#${id}`;
 }
 
-function payload(overrides: Partial<{ text: string }> = {}) {
-  return {
-    text: overrides.text ?? text.value,
-    heroId: heroId.value,
-    chatterId: chatterId.value,
-    chatterName: chatterId.value ? undefined : chatterName.value.trim() || "tester",
-    duration: duration.value,
-  };
+function assignDefaultHeroes() {
+  const heroes = heroStore.heroes;
+  if (!heroes.length) return;
+  testChatters.value = testChatters.value.map((chatter, index) => {
+    if (chatter.heroId && heroes.some((hero) => hero.id === chatter.heroId)) {
+      return chatter;
+    }
+    const hero = heroes[index] ?? heroes[0];
+    return { ...chatter, heroId: hero.id };
+  });
 }
 
-function appendLog(message: ChatMessage) {
-  if (message.source !== "test") return;
+function chatterById(chatterId: number) {
+  return testChatters.value.find((item) => item.id === chatterId);
+}
+
+function appendLog(chatter: TestChatter, message: string) {
   log.value = [
     {
       id: ++logSeq,
-      timestamp: message.timestamp,
-      username: message.username,
-      message: message.message,
-      heroName: heroNameById(message.heroId),
-      duration: message.duration ?? duration.value,
+      timestamp: Date.now(),
+      username: chatter.username,
+      message,
+      heroName: heroNameById(chatter.heroId),
+      duration: chatter.duration,
     },
     ...log.value,
   ].slice(0, 20);
 }
 
-function sendOne(overrides: Partial<{ text: string }> = {}) {
-  return emitTestMessage(payload(overrides));
+function activateLocal(chatter: TestChatter, message: string) {
+  if (!chatter.heroId) return;
+  const chatterId = chatter.id;
+  const activation: HeroActivation = {
+    chatterId,
+    username: chatter.username,
+    heroId: chatter.heroId,
+    message,
+    timestamp: Date.now(),
+  };
+  activations.value = [
+    ...activations.value.filter((item) => item.chatterId !== chatterId),
+    activation,
+  ];
+  const previous = timers.get(chatterId);
+  if (previous) clearTimeout(previous);
+  timers.set(
+    chatterId,
+    setTimeout(() => {
+      activations.value = activations.value.filter(
+        (item) => item.chatterId !== chatterId,
+      );
+      timers.delete(chatterId);
+    }, chatter.duration),
+  );
 }
 
-function onSend() {
-  sendOne();
+function sendOne(chatterId: number, overrides: Partial<{ text: string }> = {}) {
+  const current = chatterById(chatterId);
+  if (!current?.heroId) return false;
+  showIdle.value = false;
+  const message = overrides.text ?? current.text;
+  activateLocal(current, message);
+  appendLog(current, message);
+  emitTestMessage({
+    text: message,
+    heroId: current.heroId,
+    chatterName: current.username,
+    duration: current.duration,
+  });
+  return true;
 }
 
-async function onSpam() {
-  sending.value = true;
+function onSend(chatterId: number) {
+  sendOne(chatterId);
+}
+
+async function onSpam(chatterId: number) {
+  const current = chatterById(chatterId);
+  if (!current) return;
+  sendingId.value = chatterId;
   try {
     const count = 4;
     for (let i = 1; i <= count; i += 1) {
-      sendOne({ text: `${text.value || "спам"} (${i})` });
+      sendOne(chatterId, { text: `${current.text || "спам"} (${i})` });
       if (i < count) await new Promise((resolve) => setTimeout(resolve, 500));
     }
   } finally {
-    sending.value = false;
+    sendingId.value = null;
   }
 }
 
-function onLongText() {
-  text.value = LONG_TEXT;
-}
-
-function onActivate() {
-  sendOne({ text: "" });
+function onLongText(chatterId: number) {
+  const current = chatterById(chatterId);
+  if (!current) return;
+  current.text = LONG_TEXT;
 }
 
 function onReset() {
-  emitTestResetOverlay();
+  for (const timer of timers.values()) clearTimeout(timer);
+  timers.clear();
+  activations.value = [];
 }
 
 watch(
-  () => chatStore.lastMessage,
-  (message) => {
-    if (message) appendLog(message);
-  },
+  () => heroStore.heroes,
+  () => assignDefaultHeroes(),
+  { deep: true },
 );
 
 onMounted(async () => {
@@ -112,12 +173,12 @@ onMounted(async () => {
   } catch (error) {
     console.warn("Failed to load heroes", error);
   }
-  try {
-    const result = await fetchChatters(1, 100);
-    chatters.value = result.chatters;
-  } catch (error) {
-    console.warn("Failed to load chatters", error);
-  }
+  assignDefaultHeroes();
+});
+
+onUnmounted(() => {
+  for (const timer of timers.values()) clearTimeout(timer);
+  timers.clear();
 });
 </script>
 
@@ -127,25 +188,23 @@ onMounted(async () => {
     <v-row>
       <v-col cols="12" md="5">
         <TestMessageForm
-          v-model:text="text"
-          v-model:hero-id="heroId"
-          v-model:chatter-id="chatterId"
-          v-model:chatter-name="chatterName"
-          v-model:duration="duration"
+          v-model:chatters="testChatters"
           v-model:show-idle="showIdle"
           :heroes="heroStore.heroes"
-          :chatters="chatters"
-          :sending="sending"
-          :disabled="!ready"
+          :sending-id="sendingId"
           @send="onSend"
           @spam="onSpam"
           @long-text="onLongText"
-          @activate="onActivate"
           @reset="onReset"
         />
       </v-col>
       <v-col cols="12" md="7">
-        <OverlayPreview v-model:background="background" :idle="showIdle" />
+        <OverlayPreview
+          v-model:background="background"
+          :idle="showIdle"
+          :items="previewItems"
+          :activations="activations"
+        />
       </v-col>
     </v-row>
     <v-row>

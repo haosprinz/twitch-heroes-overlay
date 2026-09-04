@@ -40,42 +40,49 @@ export const useChatStore = defineStore("chat", () => {
 
   function setLastMessage(message: ChatMessage) {
     lastMessage.value = message;
+    if (message.source === "test") return;
     recentMessages.value = [message, ...recentMessages.value].slice(0, 50);
   }
 
   function activateHero(message: ChatMessage, durationMs: number) {
-    if (!message.heroId) return;
-    if (message.message.trim().startsWith("/")) return;
+    if (message.source === "test") return;
+    if (!message.chatterId || !message.heroId) return;
+    if (message.message.trim().startsWith("\\")) return;
 
+    const chatterId = message.chatterId;
     const activation: HeroActivation = {
-      chatterId: message.chatterId,
+      chatterId,
       username: message.username,
       heroId: message.heroId,
       message: message.message,
       timestamp: message.timestamp,
     };
 
-    const next = activations.value.filter((item) => item.heroId !== message.heroId);
+    const next = activations.value.filter(
+      (item) => item.chatterId !== chatterId,
+    );
     next.push(activation);
     next.sort((a, b) => a.timestamp - b.timestamp);
     while (next.length > MAX_ACTIVE) {
       const dropped = next.shift();
-      if (dropped) {
-        const timer = timers.get(dropped.heroId);
+      if (dropped?.chatterId) {
+        const timer = timers.get(dropped.chatterId);
         if (timer) clearTimeout(timer);
-        timers.delete(dropped.heroId);
+        timers.delete(dropped.chatterId);
       }
     }
     activations.value = next;
 
-    const previous = timers.get(message.heroId);
+    const previous = timers.get(chatterId);
     if (previous) clearTimeout(previous);
     const holdMs = Math.max(500, message.duration || durationMs || 5000);
     timers.set(
-      message.heroId,
+      chatterId,
       setTimeout(() => {
-        activations.value = activations.value.filter((item) => item.heroId !== message.heroId);
-        timers.delete(message.heroId!);
+        activations.value = activations.value.filter(
+          (item) => item.chatterId !== chatterId,
+        );
+        timers.delete(chatterId);
       }, holdMs),
     );
   }
@@ -84,6 +91,15 @@ export const useChatStore = defineStore("chat", () => {
     for (const timer of timers.values()) clearTimeout(timer);
     timers.clear();
     activations.value = [];
+  }
+
+  function deactivateChatter(chatterId: number) {
+    const timer = timers.get(chatterId);
+    if (timer) clearTimeout(timer);
+    timers.delete(chatterId);
+    activations.value = activations.value.filter(
+      (item) => item.chatterId !== chatterId,
+    );
   }
 
   function isHeroActive(heroId: number) {
@@ -105,6 +121,7 @@ export const useChatStore = defineStore("chat", () => {
     setLastMessage,
     activateHero,
     clearActivations,
+    deactivateChatter,
     isHeroActive,
     activationFor,
   };

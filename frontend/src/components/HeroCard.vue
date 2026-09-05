@@ -1,23 +1,24 @@
 <script setup lang="ts">
-import type { Hero } from "@/types/hero";
-import { assetUrl } from "@/utils/assetUrl";
+import DrawnHero from "@/components/DrawnHero.vue";
+import type { Hero, HeroStatus } from "@/types/hero";
 
 defineProps<{
   hero: Hero;
   active?: boolean;
+  status?: HeroStatus;
 }>();
+
+const labels: Record<HeroStatus, string> = {
+  patrol: "патрулирование",
+  duel: "в дуэли",
+  lying: "лежит",
+};
 </script>
 
 <template>
-  <div class="hero-card" :style="{ width: `${active ? hero.activeWidth : hero.width}px` }">
-    <img
-      v-if="hero.gifUrl"
-      :src="assetUrl(hero.gifUrl)"
-      :alt="hero.name"
-      :width="active ? hero.activeWidth : hero.width"
-      :height="active ? hero.activeHeight : hero.height"
-    />
-    <div v-else class="hero-card__placeholder">{{ hero.name }}</div>
+  <div class="hero-card">
+    <DrawnHero :hero="hero" :pose="status === 'lying' ? 'lie' : active ? 'ready' : 'idle'" />
+    <div v-if="status" class="hero-card__status">{{ labels[status] }}</div>
   </div>
 </template>
 
@@ -26,21 +27,13 @@ defineProps<{
   display: flex;
   flex-direction: column;
   align-items: center;
-  transition: width 0.25s ease;
 }
 
-.hero-card img {
-  max-width: 100%;
-  height: auto;
-  object-fit: contain;
-  transition: width 0.25s ease, height 0.25s ease;
-}
-
-.hero-card__placeholder {
-  padding: 24px;
-  border-radius: 12px;
-  background: rgba(145, 70, 255, 0.35);
-  color: #fff;
+.hero-card__status {
+  margin-top: 4px;
+  color: rgba(0, 0, 0, 0.7);
+  font-size: 12px;
   font-weight: 700;
+  text-transform: uppercase;
 }
 </style>

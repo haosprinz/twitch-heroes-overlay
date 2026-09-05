@@ -12,7 +12,9 @@ import {
   serializeHero,
   updateHero,
 } from "../models/Hero.js";
-import { emitToClients } from "../services/chatService.js";
+import { parseHeroConfig } from "../services/heroAppearance.js";
+import { emitToClients } from "../services/realtime.js";
+import { getOverlayState } from "../services/overlayState.js";
 import type { HeroPatch } from "../types.js";
 
 const router = Router();
@@ -58,11 +60,13 @@ function heroFieldsFromBody(
       body?.bubbleDuration,
       defaults.bubbleDuration ?? 5000,
     ),
+    config: body?.config != null ? parseHeroConfig(body.config, String(body?.name || defaults.name || "Герой")) : undefined,
   };
 }
 
 function emitHeroEvent(event: string, payload: Record<string, unknown>): void {
   emitToClients(event, { ...payload, timestamp: Date.now() });
+  emitToClients("overlay_state", { ...getOverlayState(), timestamp: Date.now() });
 }
 
 router.get("/", (_req, res) => {
@@ -86,41 +90,31 @@ router.post("/", gifUpload.single("gif"), (req, res) => {
     res.status(400).json({ success: false, error: "name is required" });
     return;
   }
-  if (!req.file) {
-    res.status(400).json({
-      success: false,
-      error: "Invalid file type. Only GIF files are allowed.",
-    });
-    return;
-  }
 
   const fields = heroFieldsFromBody(body);
   const hero = createHero({
     name,
-    gifUrl: publicGifUrl(req.file.filename),
-    width: fields.width ?? 200,
-    height: fields.height ?? 200,
-    activeWidth: fields.activeWidth ?? 300,
-    activeHeight: fields.activeHeight ?? 300,
+    gifUrl: req.file ? publicGifUrl(req.file.filename) : "",
+    width: fields.width ?? 160,
+    height: fields.height ?? 220,
+    activeWidth: fields.activeWidth ?? 180,
+    activeHeight: fields.activeHeight ?? 240,
     bubbleColor: fields.bubbleColor ?? "#ffffff",
-    fontSize: fields.fontSize ?? 18,
-    fontColor: fields.fontColor ?? "#000000",
+    fontSize: fields.fontSize ?? 16,
+    fontColor: fields.fontColor ?? "#111111",
     bubbleDuration: fields.bubbleDuration ?? 5000,
+    config: fields.config,
   });
   const mapped = serializeHero(hero);
   emitHeroEvent("hero_created", { hero: mapped });
   res.status(201).json({ success: true, hero: mapped });
 });
 
-router.put("/:id", gifUpload.single("gif"), (req, res) => {
-  const current = getHeroById(Number(req.params.id));
-  if (!current) {
-    if (req.file) deleteGifFile(publicGifUrl(req.file.filename));
-    res.status(404).json({ success: false, error: "Hero not found" });
-    return;
-  }
-
-  const body = (req.body ?? {}) as Record<string, unknown>;
+function applyHeroUpdate(
+  current: NonNullable<ReturnType<typeof getHeroById>>,
+  body: Record<string, unknown>,
+  gifUrl?: string,
+) {
   const fields = heroFieldsFromBody(body, {
     name: current.name,
     width: current.width,
@@ -132,21 +126,43 @@ router.put("/:id", gifUpload.single("gif"), (req, res) => {
     fontColor: current.font_color,
     bubbleDuration: current.bubble_duration,
   });
-
   if (!fields.name) {
+    return { error: "name is required" as const };
+  }
+  const hero = updateHero(current.id, { ...fields, gifUrl });
+  return { hero };
+}
+
+router.put("/:id", (req, res, next) => {
+  const isMultipart = String(req.headers["content-type"] || "").includes("multipart/form-data");
+  if (isMultipart) {
+    gifUpload.single("gif")(req, res, next);
+    return;
+  }
+  next();
+}, (req, res) => {
+  const current = getHeroById(Number(req.params.id));
+  if (!current) {
     if (req.file) deleteGifFile(publicGifUrl(req.file.filename));
-    res.status(400).json({ success: false, error: "name is required" });
+    res.status(404).json({ success: false, error: "Hero not found" });
     return;
   }
 
+  const body = (req.body ?? {}) as Record<string, unknown>;
   let gifUrl: string | undefined;
   if (req.file) {
     gifUrl = publicGifUrl(req.file.filename);
-    deleteGifFile(current.gif_url);
+    if (current.gif_url) deleteGifFile(current.gif_url);
   }
 
-  const hero = updateHero(current.id, { ...fields, gifUrl });
-  const mapped = serializeHero(hero);
+  const result = applyHeroUpdate(current, body, gifUrl);
+  if ("error" in result) {
+    if (req.file) deleteGifFile(publicGifUrl(req.file.filename));
+    res.status(400).json({ success: false, error: result.error });
+    return;
+  }
+
+  const mapped = serializeHero(result.hero);
   emitHeroEvent("hero_updated", { hero: mapped });
   res.json({ success: true, hero: mapped });
 });
@@ -157,7 +173,7 @@ router.delete("/:id", (req, res) => {
     res.status(404).json({ success: false, error: "Hero not found" });
     return;
   }
-  deleteGifFile(hero.gif_url);
+  if (hero.gif_url) deleteGifFile(hero.gif_url);
   emitHeroEvent("hero_deleted", { heroId: hero.id });
   res.json({ success: true, message: "Hero deleted successfully" });
 });

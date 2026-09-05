@@ -5,6 +5,7 @@ import {
   getChatterWithHero,
 } from "../models/Chatter.js";
 import { getHeroById, getHeroByName, pickRandomHero } from "../models/Hero.js";
+import { serializeChatterStatus } from "./overlayState.js";
 import type {
   AssignResult,
   ChatterWithHeroRow,
@@ -15,19 +16,7 @@ export function serializeChatter(
   row: ChatterWithHeroRow | null | undefined,
 ): SerializedChatter | null {
   if (!row) return null;
-  return {
-    id: row.id,
-    twitchId: row.twitch_id,
-    username: row.username,
-    displayName: row.display_name,
-    profileImageUrl: row.profile_image_url,
-    heroId: row.hero_id,
-    hero: row.hero_id ? { id: row.hero_id, name: row.hero_name ?? "" } : null,
-    lastSeen: row.last_seen,
-    assignedAt: row.assigned_at,
-    messageCount: Number(row.message_count || 0),
-    totalMessages: Number(row.message_count || 0),
-  };
+  return serializeChatterStatus(row);
 }
 
 export function assignHero(chatterId: number, heroId: number): AssignResult {

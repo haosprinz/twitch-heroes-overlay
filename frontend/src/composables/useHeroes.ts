@@ -1,5 +1,5 @@
 import { useAppStore } from "@/stores/appStore";
-import type { Hero } from "@/types/hero";
+import type { Hero, HeroConfig } from "@/types/hero";
 
 function assertOk(data: { success: boolean; error?: string }, fallback: string) {
   if (!data.success) {
@@ -27,10 +27,15 @@ export function useHeroes() {
     return data.hero as Hero;
   }
 
-  async function updateHero(id: number, form: FormData): Promise<Hero> {
+  async function updateHero(
+    id: number,
+    payload: FormData | { name: string; config: HeroConfig } & Record<string, unknown>,
+  ): Promise<Hero> {
+    const isForm = payload instanceof FormData;
     const response = await fetch(`${appStore.apiUrl}/api/heroes/${id}`, {
       method: "PUT",
-      body: form,
+      headers: isForm ? undefined : { "Content-Type": "application/json" },
+      body: isForm ? payload : JSON.stringify(payload),
     });
     const data = await response.json();
     assertOk(data, "Failed to update hero");

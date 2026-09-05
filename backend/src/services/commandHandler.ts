@@ -1,5 +1,4 @@
-import { listHeroes } from "../models/Hero.js";
-import { assignHeroByName, getAssignedChatter } from "./heroAssignment.js";
+import { requestDuel, statsReply } from "./duelService.js";
 import type { ChatterRow, CommandResult } from "../types.js";
 
 export function parseCommand(
@@ -19,14 +18,6 @@ export function isCommandText(text: string): boolean {
   return parseCommand(text) !== null;
 }
 
-function listHeroNames(): string {
-  const names = listHeroes().map((hero) => hero.name);
-  if (!names.length) {
-    return "📜 Доступные герои: пока нет. Добавьте героев в админке.";
-  }
-  return `📜 Доступные герои: ${names.join(", ")}`;
-}
-
 export function handleCommand({
   chatter,
   text,
@@ -39,45 +30,12 @@ export function handleCommand({
     return { handled: false };
   }
 
-  if (parsed.name === "heroes") {
-    if (!parsed.argument) {
-      return { handled: true, type: "info", reply: listHeroNames() };
-    }
-
-    const result = assignHeroByName(chatter.id, parsed.argument);
-    if (!result.ok) {
-      return {
-        handled: true,
-        type: "error",
-        reply: `❌ Герой "${parsed.argument}" не найден. Используйте \\heroes для списка`,
-      };
-    }
-
-    const username = chatter.display_name || chatter.username;
-    return {
-      handled: true,
-      type: "success",
-      reply: `✅ ${username} теперь играет за ${result.hero?.name}! 🎮`,
-      chatter: result.chatter,
-      hero: result.hero ?? undefined,
-    };
+  if (parsed.name === "duel") {
+    return requestDuel(chatter, parsed.argument);
   }
 
-  if (parsed.name === "hero") {
-    const current = getAssignedChatter(chatter.id);
-    if (!current?.hero_id || !current.hero_name) {
-      return {
-        handled: true,
-        type: "info",
-        reply:
-          "ℹ️ У вас нет героя. Напишите \\heroes для списка доступных героев",
-      };
-    }
-    return {
-      handled: true,
-      type: "info",
-      reply: `🎮 Ваш герой: ${current.hero_name}`,
-    };
+  if (parsed.name === "stats") {
+    return statsReply(chatter);
   }
 
   if (parsed.name === "help") {
@@ -85,7 +43,7 @@ export function handleCommand({
       handled: true,
       type: "info",
       reply:
-        "📖 Доступные команды:\n• \\heroes - показать список героев\n• \\heroes имя - выбрать героя\n• \\hero - показать вашего героя\n• \\help - показать эту справку",
+        "📖 Доступные команды:\n• \\duel ник - вызвать на дуэль\n• \\stats - ваши победы и поражения\n• \\help - показать эту справку",
     };
   }
 

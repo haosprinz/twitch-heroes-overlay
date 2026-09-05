@@ -2,10 +2,14 @@ import { EventSubWsListener } from "@twurple/eventsub-ws";
 import type { Server as SocketServer } from "socket.io";
 import { getTwitchConfig } from "../config/twitch.js";
 import { upsertChatterFromTwitch } from "../models/Chatter.js";
+import { serializeHero } from "../models/Hero.js";
 import { insertMessage } from "../models/Message.js";
 import { setSetting } from "../models/Settings.js";
 import { handleCommand, isCommandText } from "./commandHandler.js";
-import { assignRandomHero, serializeChatter } from "./heroAssignment.js";
+import { attachDuelChat } from "./duelService.js";
+import { serializeChatter } from "./heroAssignment.js";
+import { ensurePersonalHero } from "./heroFactory.js";
+import { attachSocket as attachRealtime, emitToClients } from "./realtime.js";
 import { getApiClient, getAuthStatus } from "./twitchService.js";
 import type {
   ChatterRow,
@@ -14,13 +18,10 @@ import type {
   HeroRow,
 } from "../types.js";
 
-let io: SocketServer | null = null;
 let listener: EventSubWsListener | null = null;
 let status: EventSubStatusName = "disconnected";
 
-export function emitToClients(event: string, payload: unknown): void {
-  io?.emit(event, payload);
-}
+export { emitToClients } from "./realtime.js";
 
 function emitConnectionStatus(
   nextStatus: EventSubStatusName,
@@ -62,7 +63,8 @@ export function emitHeroChange(
 }
 
 export function attachSocket(socketServer: SocketServer): void {
-  io = socketServer;
+  attachRealtime(socketServer);
+  attachDuelChat(sendChatReply);
 }
 
 export function getEventSubStatus() {
@@ -117,18 +119,16 @@ async function sendChatReply(message: string, type = "info"): Promise<void> {
   }
 }
 
-function maybeAssignRandomHero(chatter: ChatterRow): ChatterRow {
-  if (chatter.hero_id) {
-    return chatter;
+function maybeAssignPersonalHero(chatter: ChatterRow): ChatterRow {
+  const result = ensurePersonalHero(chatter);
+  if (result.created) {
+    emitToClients("hero_created", {
+      hero: serializeHero(result.hero),
+      timestamp: Date.now(),
+    });
+    emitHeroChange(result.chatter, result.hero);
+    console.log(`Personal hero created for ${result.chatter.username}`);
   }
-  const result = assignRandomHero(chatter.id);
-  if (!result.ok) {
-    return chatter;
-  }
-  emitHeroChange(result.chatter, result.hero);
-  console.log(
-    `Random hero ${result.hero?.name} assigned to ${result.chatter.username}`,
-  );
   return result.chatter;
 }
 
@@ -147,7 +147,7 @@ async function handleChatMessage(event: ChatMessageEvent): Promise<void> {
     displayName: event.chatterDisplayName,
   });
 
-  chatter = maybeAssignRandomHero(chatter);
+  chatter = maybeAssignPersonalHero(chatter);
 
   insertMessage({
     chatterId: chatter.id,

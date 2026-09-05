@@ -1,4 +1,4 @@
-import type { Hero } from "./hero";
+import type { Hero, HeroStatus } from "./hero";
 
 export interface Chatter {
   id: number;
@@ -10,4 +10,9 @@ export interface Chatter {
   hero: Pick<Hero, "id" | "name"> | null;
   lastSeen: string | null;
   messageCount?: number;
+  wins?: number;
+  losses?: number;
+  lyingUntil?: string | null;
+  inDuel?: boolean;
+  status?: HeroStatus;
 }

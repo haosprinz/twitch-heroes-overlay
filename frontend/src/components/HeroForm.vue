@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
-import type { Hero } from "@/types/hero";
-import { assetUrl } from "@/utils/assetUrl";
+import DrawnHero from "@/components/DrawnHero.vue";
+import { defaultHeroConfig, type Hero, type HeroConfig } from "@/types/hero";
 
 const props = defineProps<{
   hero?: Hero | null;
@@ -10,99 +10,138 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
-  save: [form: FormData];
+  save: [payload: { name: string; config: HeroConfig } & Record<string, unknown>];
   cancel: [];
 }>();
 
-const name = ref(props.hero?.name || "");
-const width = ref(props.hero?.width ?? 200);
-const height = ref(props.hero?.height ?? 200);
-const activeWidth = ref(props.hero?.activeWidth ?? 300);
-const activeHeight = ref(props.hero?.activeHeight ?? 300);
+const config = ref<HeroConfig>(defaultHeroConfig(props.hero?.name || "Герой"));
 const bubbleColor = ref(props.hero?.bubbleColor || "#ffffff");
-const fontColor = ref(props.hero?.fontColor || "#000000");
-const fontSize = ref(props.hero?.fontSize ?? 18);
+const fontColor = ref(props.hero?.fontColor || "#111111");
+const fontSize = ref(props.hero?.fontSize ?? 16);
 const bubbleDuration = ref(props.hero?.bubbleDuration ?? 5000);
-const gifFile = ref<File[] | File | null>(null);
-const localPreview = ref("");
 
 watch(
   () => props.hero,
   (hero) => {
-    name.value = hero?.name || "";
-    width.value = hero?.width ?? 200;
-    height.value = hero?.height ?? 200;
-    activeWidth.value = hero?.activeWidth ?? 300;
-    activeHeight.value = hero?.activeHeight ?? 300;
+    config.value = {
+      ...defaultHeroConfig(hero?.name || "Герой"),
+      ...(hero?.config || {}),
+      name: hero?.name || hero?.config?.name || "Герой",
+    };
     bubbleColor.value = hero?.bubbleColor || "#ffffff";
-    fontColor.value = hero?.fontColor || "#000000";
-    fontSize.value = hero?.fontSize ?? 18;
+    fontColor.value = hero?.fontColor || "#111111";
+    fontSize.value = hero?.fontSize ?? 16;
     bubbleDuration.value = hero?.bubbleDuration ?? 5000;
-    gifFile.value = null;
-    localPreview.value = "";
   },
+  { immediate: true },
 );
 
-const previewUrl = computed(() => {
-  if (localPreview.value) return localPreview.value;
-  if (props.hero?.gifUrl) return assetUrl(props.hero.gifUrl);
-  return "";
-});
+const hairItems = [
+  { title: "Короткие", value: "short" },
+  { title: "Длинные", value: "long" },
+  { title: "Ёжик", value: "spiky" },
+  { title: "Лысый", value: "bald" },
+  { title: "Хвост", value: "ponytail" },
+];
+const hatItems = [
+  { title: "Без убора", value: "none" },
+  { title: "Кепка", value: "cap" },
+  { title: "Шапка", value: "beanie" },
+  { title: "Корона", value: "crown" },
+];
+const glassesItems = [
+  { title: "Без очков", value: "none" },
+  { title: "Круглые", value: "round" },
+  { title: "Квадратные", value: "square" },
+];
 
-function onFileChange(value: File | File[] | null) {
-  const file = Array.isArray(value) ? value[0] : value;
-  if (localPreview.value) URL.revokeObjectURL(localPreview.value);
-  localPreview.value = file ? URL.createObjectURL(file) : "";
-}
+const lockedName = computed(() => props.hero?.username || config.value.name);
 
-watch(gifFile, onFileChange);
+const previewHero = computed(() => ({
+  ...(props.hero || {
+    id: 0,
+    name: config.value.name,
+    gifUrl: "",
+    width: 160,
+    height: 220,
+    activeWidth: 180,
+    activeHeight: 240,
+    bubbleColor: bubbleColor.value,
+    fontSize: fontSize.value,
+    fontColor: fontColor.value,
+    bubbleDuration: bubbleDuration.value,
+  }),
+  name: config.value.name,
+  config: config.value,
+}));
 
 function submit() {
-  const form = new FormData();
-  form.append("name", name.value.trim());
-  form.append("width", String(width.value));
-  form.append("height", String(height.value));
-  form.append("activeWidth", String(activeWidth.value));
-  form.append("activeHeight", String(activeHeight.value));
-  form.append("bubbleColor", bubbleColor.value);
-  form.append("fontColor", fontColor.value);
-  form.append("fontSize", String(fontSize.value));
-  form.append("bubbleDuration", String(bubbleDuration.value));
-  const file = Array.isArray(gifFile.value) ? gifFile.value[0] : gifFile.value;
-  if (file) form.append("gif", file);
-  emit("save", form);
+  const name = (lockedName.value || "Герой").trim();
+  emit("save", {
+    name,
+    config: { ...config.value, name },
+    bubbleColor: bubbleColor.value,
+    fontColor: fontColor.value,
+    fontSize: fontSize.value,
+    bubbleDuration: bubbleDuration.value,
+    width: 160,
+    height: 220,
+    activeWidth: 180,
+    activeHeight: 240,
+  });
 }
 </script>
 
 <template>
   <v-form @submit.prevent="submit">
-    <v-text-field v-model="name" label="Имя героя" variant="outlined" required class="mb-3" />
-    <v-file-input
-      v-model="gifFile"
-      label="GIF"
-      accept="image/gif"
+    <div class="d-flex justify-center mb-4">
+      <DrawnHero :hero="previewHero" pose="idle" />
+    </div>
+    <v-text-field
+      v-if="hero?.username"
+      :model-value="lockedName"
+      label="Имя героя"
       variant="outlined"
-      prepend-icon=""
-      prepend-inner-icon="mdi-gif"
-      :hint="hero ? 'Оставьте пустым, чтобы не менять гифку' : 'Обязательно при создании'"
+      class="mb-3"
+      disabled
+      hint="Совпадает с никнеймом пользователя"
       persistent-hint
+    />
+    <v-text-field
+      v-else
+      v-model="config.name"
+      label="Имя героя"
+      variant="outlined"
+      required
       class="mb-3"
     />
-    <div v-if="previewUrl" class="mb-4">
-      <img :src="previewUrl" alt="Превью" class="preview-gif" />
-    </div>
     <v-row>
       <v-col cols="6">
-        <v-text-field v-model.number="width" type="number" label="Ширина" variant="outlined" />
+        <v-text-field v-model="config.skin" type="color" label="Кожа" variant="outlined" />
       </v-col>
       <v-col cols="6">
-        <v-text-field v-model.number="height" type="number" label="Высота" variant="outlined" />
+        <v-text-field v-model="config.hairColor" type="color" label="Цвет волос" variant="outlined" />
       </v-col>
       <v-col cols="6">
-        <v-text-field v-model.number="activeWidth" type="number" label="Активная ширина" variant="outlined" />
+        <v-select v-model="config.hair" :items="hairItems" label="Волосы" variant="outlined" />
       </v-col>
       <v-col cols="6">
-        <v-text-field v-model.number="activeHeight" type="number" label="Активная высота" variant="outlined" />
+        <v-select v-model="config.hat" :items="hatItems" label="Убор" variant="outlined" />
+      </v-col>
+      <v-col cols="6">
+        <v-select v-model="config.glasses" :items="glassesItems" label="Очки" variant="outlined" />
+      </v-col>
+      <v-col cols="6">
+        <v-text-field v-model="config.shirtColor" type="color" label="Одежда" variant="outlined" />
+      </v-col>
+      <v-col cols="6">
+        <v-text-field v-model="config.pantsColor" type="color" label="Штаны" variant="outlined" />
+      </v-col>
+      <v-col cols="6">
+        <v-slider v-model="config.size" :min="0.6" :max="1.8" :step="0.05" label="Размер" thumb-label />
+      </v-col>
+      <v-col cols="6">
+        <v-slider v-model="config.speed" :min="0.4" :max="2.2" :step="0.05" label="Скорость" thumb-label />
       </v-col>
       <v-col cols="6">
         <v-text-field v-model="bubbleColor" type="color" label="Цвет облака" variant="outlined" />
@@ -129,12 +168,3 @@ function submit() {
     </div>
   </v-form>
 </template>
-
-<style scoped>
-.preview-gif {
-  max-width: 200px;
-  max-height: 200px;
-  object-fit: contain;
-  border-radius: 8px;
-}
-</style>

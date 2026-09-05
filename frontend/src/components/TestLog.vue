@@ -28,7 +28,7 @@ function formatTime(value: number) {
       <v-spacer />
       <v-btn size="small" variant="text" @click="emit('clear')">Очистить лог</v-btn>
     </v-card-title>
-    <v-card-text>
+    <v-card-text class="log-body">
       <v-table v-if="entries.length" density="compact">
         <thead>
           <tr>
@@ -55,8 +55,13 @@ function formatTime(value: number) {
 </template>
 
 <style scoped>
+.log-body {
+  max-height: min(32vh, 320px);
+  overflow: auto;
+}
+
 .log-text {
-  max-width: 420px;
+  max-width: 280px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

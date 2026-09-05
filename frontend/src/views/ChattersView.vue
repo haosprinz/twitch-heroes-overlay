@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref, watch } from "vue";
+import { useRouter } from "vue-router";
 import { useChatters } from "@/composables/useChatters";
 import { useHeroes } from "@/composables/useHeroes";
 import { useWebSocket } from "@/composables/useWebSocket";
@@ -9,25 +10,24 @@ import type { Chatter } from "@/types/chatter";
 
 const chatterStore = useChatterStore();
 const heroStore = useHeroStore();
-const { fetchChatters, assignHero, deleteChatter } = useChatters();
+const { fetchChatters, ensureHero, deleteChatter } = useChatters();
 const { fetchHeroes } = useHeroes();
 useWebSocket();
+const router = useRouter();
 
 const search = ref("");
 const page = ref(1);
 const limit = ref(25);
 const loading = ref(false);
 const error = ref("");
-const assignTarget = ref<Chatter | null>(null);
 const confirmDelete = ref<Chatter | null>(null);
-const selectedHeroId = ref<number | null>(null);
 const saving = ref(false);
 
 const headers = [
-  { title: "Имя", key: "displayName" },
-  { title: "Логин", key: "username" },
+  { title: "Пользователь", key: "displayName" },
+  { title: "Счёт", key: "score" },
+  { title: "Статус", key: "status" },
   { title: "Герой", key: "hero" },
-  { title: "Сообщения", key: "messageCount" },
   { title: "Последняя активность", key: "lastSeen" },
   { title: "", key: "actions", sortable: false },
 ];
@@ -53,22 +53,32 @@ function formatDate(value?: string | null) {
   return Number.isNaN(date.getTime()) ? value : date.toLocaleString();
 }
 
-function openAssign(chatter: Chatter) {
-  assignTarget.value = chatter;
-  selectedHeroId.value = chatter.heroId;
+function scoreOf(item: Chatter) {
+  return `${item.wins ?? 0}:${item.losses ?? 0}`;
 }
 
-async function saveAssign() {
-  if (!assignTarget.value || !selectedHeroId.value) return;
-  saving.value = true;
+function statusOf(item: Chatter) {
+  if (item.status === "duel" || item.inDuel) return "в дуэли";
+  if (item.status === "lying") return "лежит";
+  return "патрулирование";
+}
+
+function onRowClick(_event: unknown, row: { item: Chatter }) {
+  void openHero(row.item);
+}
+
+async function openHero(chatter: Chatter) {
   try {
-    await assignHero(assignTarget.value.id, selectedHeroId.value);
-    assignTarget.value = null;
-    await load();
+    let heroId = chatter.heroId;
+    if (!heroId) {
+      const result = await ensureHero(chatter.id);
+      heroId = result.hero?.id ?? result.chatter.heroId;
+    }
+    if (heroId) {
+      await router.push({ path: "/admin", query: { heroId: String(heroId) } });
+    }
   } catch (err) {
-    error.value = err instanceof Error ? err.message : "Не удалось назначить героя";
-  } finally {
-    saving.value = false;
+    error.value = err instanceof Error ? err.message : "Не удалось открыть героя";
   }
 }
 
@@ -109,10 +119,13 @@ onMounted(async () => {
 
 <template>
   <v-container>
-    <h1 class="text-h4 mb-4">Пользователи</h1>
+    <h1 class="text-h4 mb-2">Пользователи</h1>
+    <p class="text-medium-emphasis mb-4">
+      Счёт — победы:поражения. Клик по строке открывает героя. Дуэли только через <code>\duel ник</code>.
+    </p>
     <v-text-field
       v-model="search"
-      label="Поиск по имени или логину"
+      label="Поиск по нику"
       variant="outlined"
       density="compact"
       class="mb-4"
@@ -127,58 +140,39 @@ onMounted(async () => {
       :items-length="chatterStore.pagination.total"
       :loading="loading"
       item-value="id"
+      @click:row="onRowClick"
     >
       <template #item.displayName="{ item }">
-        {{ item.displayName || item.username }}
+        {{ item.displayName || item.username }} [{{ scoreOf(item) }}]
+      </template>
+      <template #item.score="{ item }">
+        {{ scoreOf(item) }}
+      </template>
+      <template #item.status="{ item }">
+        {{ statusOf(item) }}
       </template>
       <template #item.hero="{ item }">
         {{ item.hero?.name || "—" }}
-      </template>
-      <template #item.messageCount="{ item }">
-        {{ item.messageCount ?? 0 }}
       </template>
       <template #item.lastSeen="{ item }">
         {{ formatDate(item.lastSeen) }}
       </template>
       <template #item.actions="{ item }">
-        <v-btn size="small" variant="text" @click="openAssign(item)">Герой</v-btn>
-        <v-btn size="small" variant="text" color="error" @click="confirmDelete = item">
+        <v-btn size="small" variant="text" @click.stop="openHero(item)">Герой</v-btn>
+        <v-btn size="small" variant="text" color="error" @click.stop="confirmDelete = item">
           Удалить
         </v-btn>
       </template>
       <template #no-data>
-        Пока нет пользователей. Данные появятся после EventSub.
+        Пока нет пользователей. Они появятся после чата или команды \duel.
       </template>
     </v-data-table-server>
 
-    <v-dialog :model-value="Boolean(assignTarget)" max-width="420" @update:model-value="(open) => { if (!open) assignTarget = null }">
-      <v-card v-if="assignTarget">
-        <v-card-title>Назначить героя</v-card-title>
-        <v-card-text>
-          <p class="mb-4">{{ assignTarget.displayName || assignTarget.username }}</p>
-          <v-select
-            v-model="selectedHeroId"
-            :items="heroStore.heroes"
-            item-title="name"
-            item-value="id"
-            label="Герой"
-            variant="outlined"
-          />
-        </v-card-text>
-        <v-card-actions>
-          <v-spacer />
-          <v-btn variant="text" @click="assignTarget = null">Отмена</v-btn>
-          <v-btn color="primary" :loading="saving" :disabled="!selectedHeroId" @click="saveAssign">
-            Назначить
-          </v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
     <v-dialog :model-value="Boolean(confirmDelete)" max-width="420" @update:model-value="(open) => { if (!open) confirmDelete = null }">
       <v-card v-if="confirmDelete">
         <v-card-title>Удалить пользователя?</v-card-title>
         <v-card-text>
-          {{ confirmDelete.displayName || confirmDelete.username }} будет удалён вместе с историей сообщений и пропадёт с оверлея.
+          {{ confirmDelete.displayName || confirmDelete.username }} будет удалён вместе с историей сообщений и дуэлей.
         </v-card-text>
         <v-card-actions>
           <v-spacer />

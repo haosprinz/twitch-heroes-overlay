@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import DatabaseConstructor from "better-sqlite3";
+import { defaultHeroConfig, stringifyHeroConfig } from "../services/heroAppearance.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const defaultPath = path.join(__dirname, "../../data/database.sqlite");
@@ -10,12 +11,28 @@ type SqliteDatabase = InstanceType<typeof DatabaseConstructor>;
 
 let db: SqliteDatabase | undefined;
 
+function tableColumns(database: SqliteDatabase, table: string): Set<string> {
+  const rows = database.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[];
+  return new Set(rows.map((row) => row.name));
+}
+
+function addColumnIfMissing(
+  database: SqliteDatabase,
+  table: string,
+  column: string,
+  definition: string,
+): void {
+  if (!tableColumns(database, table).has(column)) {
+    database.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
+  }
+}
+
 function migrate(database: SqliteDatabase): void {
   database.exec(`
     CREATE TABLE IF NOT EXISTS heroes (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL,
-      gif_url TEXT NOT NULL,
+      gif_url TEXT NOT NULL DEFAULT '',
       width INTEGER DEFAULT 200,
       height INTEGER DEFAULT 200,
       active_width INTEGER DEFAULT 300,
@@ -24,6 +41,8 @@ function migrate(database: SqliteDatabase): void {
       font_size INTEGER DEFAULT 18,
       font_color TEXT DEFAULT '#000000',
       bubble_duration INTEGER DEFAULT 5000,
+      user_id INTEGER UNIQUE,
+      config TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME
     );
@@ -38,6 +57,10 @@ function migrate(database: SqliteDatabase): void {
       assigned_at DATETIME,
       last_seen DATETIME DEFAULT CURRENT_TIMESTAMP,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      wins INTEGER DEFAULT 0,
+      losses INTEGER DEFAULT 0,
+      lying_until DATETIME,
+      in_duel INTEGER DEFAULT 0,
       FOREIGN KEY (hero_id) REFERENCES heroes(id)
     );
 
@@ -65,7 +88,50 @@ function migrate(database: SqliteDatabase): void {
       FOREIGN KEY (chatter_id) REFERENCES chatters(id),
       FOREIGN KEY (hero_id) REFERENCES heroes(id)
     );
+
+    CREATE TABLE IF NOT EXISTS duels (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      challenger_id INTEGER,
+      opponent_id INTEGER,
+      winner_id INTEGER,
+      loser_id INTEGER,
+      started_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      finished_at DATETIME,
+      FOREIGN KEY (challenger_id) REFERENCES chatters(id),
+      FOREIGN KEY (opponent_id) REFERENCES chatters(id),
+      FOREIGN KEY (winner_id) REFERENCES chatters(id),
+      FOREIGN KEY (loser_id) REFERENCES chatters(id)
+    );
   `);
+
+  addColumnIfMissing(database, "heroes", "user_id", "INTEGER");
+  addColumnIfMissing(database, "heroes", "config", "TEXT");
+  try {
+    database.exec(
+      "CREATE UNIQUE INDEX IF NOT EXISTS idx_heroes_user_id ON heroes (user_id) WHERE user_id IS NOT NULL",
+    );
+  } catch (error) {
+    console.warn("Hero user_id unique index skipped:", error);
+  }
+  addColumnIfMissing(database, "chatters", "wins", "INTEGER DEFAULT 0");
+  addColumnIfMissing(database, "chatters", "losses", "INTEGER DEFAULT 0");
+  addColumnIfMissing(database, "chatters", "lying_until", "DATETIME");
+  addColumnIfMissing(database, "chatters", "in_duel", "INTEGER DEFAULT 0");
+  try {
+    database.exec(
+      "CREATE UNIQUE INDEX IF NOT EXISTS idx_chatters_username_lower ON chatters (lower(username))",
+    );
+  } catch (error) {
+    console.warn("Username unique index skipped:", error);
+  }
+
+  const withoutConfig = database
+    .prepare("SELECT id, name FROM heroes WHERE config IS NULL OR config = ''")
+    .all() as { id: number; name: string }[];
+  const fill = database.prepare("UPDATE heroes SET config = ? WHERE id = ?");
+  for (const row of withoutConfig) {
+    fill.run(stringifyHeroConfig(defaultHeroConfig(row.name)), row.id);
+  }
 }
 
 function seedHeroes(database: SqliteDatabase): void {
@@ -74,12 +140,30 @@ function seedHeroes(database: SqliteDatabase): void {
   };
   if (count.total > 0) return;
   const insert = database.prepare(
-    `INSERT INTO heroes (name, gif_url, bubble_color, font_color)
-     VALUES (?, ?, ?, ?)`,
+    `INSERT INTO heroes (name, gif_url, bubble_color, font_color, config)
+     VALUES (?, ?, ?, ?, ?)`,
   );
-  insert.run("odin", "/uploads/gifs/odin.gif", "#9146FF", "#ffffff");
-  insert.run("thor", "/uploads/gifs/thor.gif", "#00AEFF", "#ffffff");
-  insert.run("loki", "/uploads/gifs/loki.gif", "#00ff00", "#000000");
+  insert.run(
+    "odin",
+    "/uploads/gifs/odin.gif",
+    "#9146FF",
+    "#ffffff",
+    stringifyHeroConfig({ ...defaultHeroConfig("odin"), shirtColor: "#9146FF", hat: "crown" }),
+  );
+  insert.run(
+    "thor",
+    "/uploads/gifs/thor.gif",
+    "#00AEFF",
+    "#ffffff",
+    stringifyHeroConfig({ ...defaultHeroConfig("thor"), shirtColor: "#00AEFF", hair: "long", hairColor: "#c9a227" }),
+  );
+  insert.run(
+    "loki",
+    "/uploads/gifs/loki.gif",
+    "#00ff00",
+    "#000000",
+    stringifyHeroConfig({ ...defaultHeroConfig("loki"), shirtColor: "#2ecc71", hair: "spiky" }),
+  );
   console.log("Seeded placeholder heroes: odin, thor, loki");
 }
 

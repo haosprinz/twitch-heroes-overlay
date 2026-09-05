@@ -4,6 +4,8 @@ import { assignHero, serializeChatter } from "../services/heroAssignment.js";
 import { listChatters } from "../models/Chatter.js";
 import { listHeroes, serializeHero } from "../models/Hero.js";
 import { getStatsSnapshot } from "../services/statsService.js";
+import { startTestDuel } from "../services/duelService.js";
+import { getOverlayState } from "../services/overlayState.js";
 import {
   handleTestMessage,
   handleTestResetOverlay,
@@ -38,6 +40,10 @@ export function createSocket(io: SocketServer): SocketServer {
       stats: getStatsSnapshot(),
       timestamp: Date.now(),
     });
+    socket.emit("overlay_state", {
+      ...getOverlayState(),
+      timestamp: Date.now(),
+    });
 
     socket.on("request_heroes", () => {
       socket.emit("heroes_list", {
@@ -53,7 +59,7 @@ export function createSocket(io: SocketServer): SocketServer {
       const start = (safePage - 1) * safeLimit;
       const slice = rows.slice(start, start + safeLimit);
       socket.emit("chatters_list", {
-        chatters: slice.map((row) => serializeChatter(row)),
+        chatters: slice.map((row) => serializeChatter(row)).filter(Boolean),
         pagination: {
           page: safePage,
           limit: safeLimit,
@@ -84,6 +90,30 @@ export function createSocket(io: SocketServer): SocketServer {
     socket.on("test_reset_overlay", () => {
       handleTestResetOverlay();
     });
+
+    socket.on("request_overlay_state", () => {
+      socket.emit("overlay_state", {
+        ...getOverlayState(),
+        timestamp: Date.now(),
+      });
+    });
+
+    socket.on(
+      "test_duel",
+      (payload: { challengerName?: string; opponentName?: string } = {}) => {
+        const result = startTestDuel(
+          String(payload.challengerName || "alice"),
+          String(payload.opponentName || "bob"),
+        );
+        if (result.handled && result.reply) {
+          socket.emit("system_message", {
+            message: result.reply,
+            type: result.type || "info",
+            timestamp: Date.now(),
+          });
+        }
+      },
+    );
 
     socket.on("subscribe_to_events", (payload?: { events?: string[] }) => {
       socket.data.events = payload?.events || [];

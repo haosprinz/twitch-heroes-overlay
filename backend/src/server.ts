@@ -19,6 +19,8 @@ import {
   getEventSubStatus,
   startChatListener,
 } from "./services/chatService.js";
+import { restoreDuelTimers } from "./services/duelService.js";
+import { getOverlayState } from "./services/overlayState.js";
 import { restoreAuthFromDb } from "./services/twitchService.js";
 import { getUploadDir } from "./config/upload.js";
 
@@ -58,6 +60,11 @@ app.get("/api/health", (_req, res) => {
 app.use("/api/auth", authRoutes);
 app.use("/api/heroes", heroesRoutes);
 app.use("/api/chatters", chattersRoutes);
+app.use("/api/users", chattersRoutes);
+
+app.get("/api/overlay/state", (_req, res) => {
+  res.json({ success: true, ...getOverlayState() });
+});
 app.use("/api/settings", settingsRoutes);
 app.use("/api/stats", statsRoutes);
 app.use("/api/upload", uploadRoutes);
@@ -66,6 +73,7 @@ app.use(errorHandler);
 
 server.listen(PORT, HOST, async () => {
   console.log(`Backend listening on http://${HOST}:${PORT}`);
+  restoreDuelTimers();
   const restored = await restoreAuthFromDb();
   if (restored) {
     await startChatListener();

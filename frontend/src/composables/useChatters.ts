@@ -47,6 +47,18 @@ export function useChatters() {
     return data.chatter as { id: number; heroId: null };
   }
 
+  async function ensureHero(chatterId: number) {
+    const response = await fetch(`${appStore.apiUrl}/api/chatters/${chatterId}/ensure-hero`, {
+      method: "POST",
+    });
+    const data = await response.json();
+    assertOk(data, "Failed to ensure hero");
+    return {
+      chatter: data.chatter as Chatter,
+      hero: data.hero as { id: number; name: string } | null,
+    };
+  }
+
   async function deleteChatter(chatterId: number) {
     const response = await fetch(`${appStore.apiUrl}/api/chatters/${chatterId}`, {
       method: "DELETE",
@@ -56,5 +68,5 @@ export function useChatters() {
     return data.chatter as { id: number };
   }
 
-  return { fetchChatters, assignHero, removeHero, deleteChatter };
+  return { fetchChatters, assignHero, removeHero, ensureHero, deleteChatter };
 }

@@ -1,10 +1,7 @@
 <script setup lang="ts">
-import { computed } from "vue";
-import type { Hero } from "@/types/hero";
 import type { TestChatter } from "@/types/overlay";
 
-const props = defineProps<{
-  heroes: Hero[];
+defineProps<{
   sendingId?: number | null;
 }>();
 
@@ -17,14 +14,6 @@ const emit = defineEmits<{
   longText: [chatterId: number];
   reset: [];
 }>();
-
-const heroItems = computed(() =>
-  props.heroes.map((hero) => ({ title: hero.name, value: hero.id })),
-);
-
-function canSend(chatter: TestChatter) {
-  return Boolean(chatter.heroId);
-}
 </script>
 
 <template>
@@ -37,19 +26,6 @@ function canSend(chatter: TestChatter) {
     >
       <v-card-title>Пользователь {{ index + 1 }}</v-card-title>
       <v-card-text>
-        <v-text-field
-          v-model="chatter.username"
-          label="Никнейм"
-          hide-details
-          class="mb-3"
-        />
-        <v-select
-          v-model="chatter.heroId"
-          :items="heroItems"
-          label="Герой"
-          hide-details
-          class="mb-3"
-        />
         <v-textarea
           v-model="chatter.text"
           label="Текст сообщения"
@@ -68,21 +44,18 @@ function canSend(chatter: TestChatter) {
           hide-details
           class="mb-4"
         />
-        <p v-if="!heroes.length" class="text-caption text-error mb-2">
-          Нет героев — добавьте гифку в админке.
-        </p>
         <div class="d-flex flex-wrap ga-2">
           <v-btn
             color="primary"
             :loading="sendingId === chatter.id"
-            :disabled="!canSend(chatter) || Boolean(sendingId)"
+            :disabled="Boolean(sendingId)"
             @click="emit('send', chatter.id)"
           >
             Отправить
           </v-btn>
           <v-btn
             variant="tonal"
-            :disabled="Boolean(sendingId) || !canSend(chatter)"
+            :disabled="Boolean(sendingId)"
             @click="emit('spam', chatter.id)"
           >
             Быстрый спам

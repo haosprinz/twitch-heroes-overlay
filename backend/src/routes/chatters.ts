@@ -1,27 +1,21 @@
 import { Router } from "express";
-import { deleteChatter, listChatters, getChatterWithHero } from "../models/Chatter.js";
-import { emitHeroChange, emitToClients } from "../services/chatService.js";
+import { deleteChatter, getChatterById, listChatters, getChatterWithHero } from "../models/Chatter.js";
+import { emitHeroChange } from "../services/chatService.js";
+import { emitToClients } from "../services/realtime.js";
+import { ensurePersonalHero } from "../services/heroFactory.js";
+import { serializeHero } from "../models/Hero.js";
 import {
   assignHero,
   serializeChatter,
   unassignHero,
 } from "../services/heroAssignment.js";
+import { serializeChatterStatus } from "../services/overlayState.js";
 import type { ChatterWithHeroRow } from "../types.js";
 
 const router = Router();
 
 function mapListRow(row: ChatterWithHeroRow) {
-  return {
-    id: row.id,
-    twitchId: row.twitch_id,
-    username: row.username,
-    displayName: row.display_name,
-    profileImageUrl: row.profile_image_url,
-    heroId: row.hero_id,
-    hero: row.hero_id ? { id: row.hero_id, name: row.hero_name } : null,
-    lastSeen: row.last_seen,
-    messageCount: Number(row.message_count || 0),
-  };
+  return serializeChatterStatus(row);
 }
 
 router.get("/", (req, res) => {
@@ -42,15 +36,38 @@ router.get("/", (req, res) => {
   const start = (page - 1) * limit;
   const chatters = rows.slice(start, start + limit).map(mapListRow);
 
-  res.json({
+  const payload = {
     success: true,
     chatters,
+    users: chatters,
     pagination: {
       page,
       limit,
       total,
       totalPages: Math.max(1, Math.ceil(total / limit)),
     },
+  };
+  res.json(payload);
+});
+
+router.post("/:id/ensure-hero", (req, res) => {
+  const chatter = getChatterById(Number(req.params.id));
+  if (!chatter) {
+    res.status(404).json({ success: false, error: "Chatter not found" });
+    return;
+  }
+  const result = ensurePersonalHero(chatter);
+  if (result.created) {
+    emitToClients("hero_created", {
+      hero: serializeHero(result.hero),
+      timestamp: Date.now(),
+    });
+  }
+  emitHeroChange(result.chatter, result.hero);
+  res.json({
+    success: true,
+    chatter: serializeChatter(result.chatter),
+    hero: serializeHero(result.hero),
   });
 });
 

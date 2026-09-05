@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import OverlayStage from "@/components/OverlayStage.vue";
 import type { HeroActivation } from "@/stores/chatStore";
+import type { ActiveDuel } from "@/types/duel";
 import type { OverlaySlot } from "@/types/overlay";
 
 const background = defineModel<"checker" | "dark">("background", { default: "checker" });
@@ -9,6 +10,8 @@ defineProps<{
   idle?: boolean;
   items: OverlaySlot[];
   activations?: HeroActivation[];
+  duel?: ActiveDuel | null;
+  isolated?: boolean;
 }>();
 </script>
 
@@ -24,7 +27,14 @@ defineProps<{
     </v-card-title>
     <v-card-text class="preview__stage-wrap">
       <div class="preview__stage" :class="`preview__stage--${background}`">
-        <OverlayStage embedded :idle="idle" :items="items" :activations="activations" />
+        <OverlayStage
+          embedded
+          :isolated="isolated"
+          :idle="idle"
+          :items="items"
+          :activations="activations"
+          :duel="duel"
+        />
       </div>
     </v-card-text>
   </v-card>
@@ -32,21 +42,18 @@ defineProps<{
 
 <style scoped>
 .preview {
-  height: 100%;
   display: flex;
   flex-direction: column;
 }
 
 .preview__stage-wrap {
-  flex: 1;
-  min-height: 420px;
+  padding-bottom: 12px !important;
 }
 
 .preview__stage {
   position: relative;
-  height: min(62vh, 720px);
-  min-height: 420px;
-  overflow: auto;
+  height: 240px;
+  overflow: hidden;
   border-radius: 8px;
 }
 

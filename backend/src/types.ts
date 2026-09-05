@@ -1,3 +1,9 @@
+import type { HeroConfig } from "./services/heroAppearance.js";
+
+export type { HeroConfig };
+
+export type HeroStatus = "patrol" | "duel" | "lying";
+
 export type HeroRow = {
   id: number;
   name: string;
@@ -10,6 +16,8 @@ export type HeroRow = {
   font_size: number;
   font_color: string;
   bubble_duration: number;
+  user_id: number | null;
+  config: string | null;
   created_at: string;
   updated_at: string | null;
 };
@@ -26,11 +34,16 @@ export type SerializedHero = {
   fontSize: number;
   fontColor: string;
   bubbleDuration: number;
+  userId: number | null;
+  username: string | null;
+  config: HeroConfig;
+  status: HeroStatus;
+  lyingUntil: string | null;
 };
 
 export type HeroWrite = {
   name: string;
-  gifUrl: string;
+  gifUrl?: string;
   width: number;
   height: number;
   activeWidth: number;
@@ -39,6 +52,8 @@ export type HeroWrite = {
   fontSize: number;
   fontColor: string;
   bubbleDuration: number;
+  userId?: number | null;
+  config?: HeroConfig | string | null;
 };
 
 export type HeroPatch = Partial<HeroWrite>;
@@ -59,6 +74,10 @@ export type ChatterRow = {
   assigned_at: string | null;
   last_seen: string;
   created_at: string;
+  wins: number;
+  losses: number;
+  lying_until: string | null;
+  in_duel: number;
 };
 
 export type ChatterWithHeroRow = ChatterRow & {
@@ -78,6 +97,48 @@ export type SerializedChatter = {
   assignedAt: string | null;
   messageCount: number;
   totalMessages: number;
+  wins: number;
+  losses: number;
+  lyingUntil: string | null;
+  inDuel: boolean;
+  status: HeroStatus;
+};
+
+export type DuelRow = {
+  id: number;
+  challenger_id: number;
+  opponent_id: number;
+  winner_id: number | null;
+  loser_id: number | null;
+  started_at: string;
+  finished_at: string | null;
+};
+
+export type OverlayActor = {
+  chatterId: number;
+  username: string;
+  displayName: string;
+  wins: number;
+  losses: number;
+  status: HeroStatus;
+  lyingUntil: string | null;
+  inDuel: boolean;
+  hero: SerializedHero;
+};
+
+export type ActiveDuelSnapshot = {
+  phase: "start" | "ready" | "countdown" | "result";
+  challengerId: number;
+  opponentId: number;
+  winnerId: number | null;
+  loserId: number | null;
+  countdown: number | null;
+};
+
+export type OverlayState = {
+  actors: OverlayActor[];
+  duel: ActiveDuelSnapshot | null;
+  cooldownUntil: string | null;
 };
 
 export type TwitchChatterInput = {

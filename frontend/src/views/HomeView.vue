@@ -84,7 +84,8 @@ watch(
   <v-container class="py-12">
     <h1 class="text-h3 mb-4">Twitch Heroes Overlay</h1>
     <p class="text-body-1 mb-6">
-      Overlay для OBS, админка героев и таблица пользователей. Чат подключается через Twitch EventSub.
+      Overlay для OBS: рисованные герои патрулируют сцену, дуэли запускаются командой
+      <code>\duel ник</code> в чате. Вкладка «Пользователи» показывает счёт побед и поражений.
     </p>
 
     <v-alert v-if="alert" :type="alert.type" class="mb-6" closable @click:close="alert = null">

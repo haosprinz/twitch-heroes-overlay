@@ -1,5 +1,5 @@
 ---
-description: Product goal and two-project layout for Twitch Heroes Overlay
+description: Product goal and project layout for Twitch Heroes Overlay
 alwaysApply: true
 ---
 
@@ -9,19 +9,22 @@ alwaysApply: true
 
 ## Что строим
 
-Локальное приложение для одного стримера: герои пользователей в OBS overlay, админка героев, таблица пользователей. Чат — Twitch EventSub, real-time — Socket.io.
+Локальное приложение для одного стримера: герои пользователей в OBS overlay, админка героев, таблица пользователей, панель Twitch Extension. Чат — Twitch EventSub, real-time — Socket.io.
 
-## Два независимых проекта
+## Три независимых проекта
 
 - `backend/` — Node.js, TypeScript, Express, SQLite, Socket.io, Twurple. Запуск: `npm run dev` → `:3000`
 - `frontend/` — Vue 3, TypeScript, Vuetify 3, Pinia. Запуск: `npm run dev` → `:5173`
+- `extension/` — Vue 3, TypeScript, Vite, Twitch Helper. Запуск: `npm run dev` → `:5174`
 - Общей точки запуска нет: нет корневого `package.json`, `concurrently` и docker-compose
 
 ## Жёсткие решения
 
 - Один стример, без защиты админки
-- Гифки локально в `backend/uploads/gifs/`
-- Новым пользователям — случайный герой
+- Один пользователь = один личный герой
+- Зритель меняет своего через `/api/me/hero` (JWT расширения)
+- Стример может изменить героя любому в админке
+- Новым пользователям — случайная внешность
 - Ответы API: `{ success, ... }`
 
 Сверяйся с текущим этапом в PLAN.md перед новой работой.

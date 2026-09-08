@@ -2,13 +2,15 @@ import { Router } from "express";
 import { deleteChatter, getChatterById, listChatters, getChatterWithHero } from "../models/Chatter.js";
 import { emitHeroChange } from "../services/chatService.js";
 import { emitToClients } from "../services/realtime.js";
-import { ensurePersonalHero } from "../services/heroFactory.js";
-import { serializeHero } from "../models/Hero.js";
 import {
-  assignHero,
-  serializeChatter,
-  unassignHero,
-} from "../services/heroAssignment.js";
+  appearanceFromBody,
+  ensurePersonalHero,
+  resetPersonalHero,
+  updatePersonalHero,
+} from "../services/heroFactory.js";
+import { serializeHero } from "../models/Hero.js";
+import { serializeChatter } from "../services/heroAssignment.js";
+import { emitHeroSaved } from "../services/heroEvents.js";
 import { serializeChatterStatus } from "../services/overlayState.js";
 import type { ChatterWithHeroRow } from "../types.js";
 
@@ -58,10 +60,7 @@ router.post("/:id/ensure-hero", (req, res) => {
   }
   const result = ensurePersonalHero(chatter);
   if (result.created) {
-    emitToClients("hero_created", {
-      hero: serializeHero(result.hero),
-      timestamp: Date.now(),
-    });
+    emitHeroSaved(result.hero, true);
   }
   emitHeroChange(result.chatter, result.hero);
   res.json({
@@ -84,44 +83,48 @@ router.get("/:id", (req, res) => {
 });
 
 router.put("/:id/hero", (req, res) => {
-  const heroId = Number(req.body?.heroId);
-  if (!Number.isInteger(heroId) || heroId < 1) {
-    res.status(400).json({ success: false, error: "heroId is required" });
+  const chatter = getChatterById(Number(req.params.id));
+  if (!chatter) {
+    res.status(404).json({ success: false, error: "Chatter not found" });
     return;
   }
 
-  const result = assignHero(Number(req.params.id), heroId);
-  if (!result.ok) {
-    const status =
-      result.error === "Chatter not found" || result.error === "Hero not found"
-        ? 404
-        : 400;
-    res.status(status).json({ success: false, error: result.error });
+  const body = (req.body ?? {}) as Record<string, unknown>;
+  if (body.heroId != null && body.config == null) {
+    res.status(400).json({
+      success: false,
+      error: "Heroes are personal. Send config to change appearance.",
+    });
     return;
   }
 
+  const result = updatePersonalHero(
+    chatter,
+    appearanceFromBody(body, chatter.display_name || chatter.username),
+  );
+  const mapped = emitHeroSaved(result.hero, result.created);
   emitHeroChange(result.chatter, result.hero);
   res.json({
     success: true,
-    chatter: { id: result.chatter.id, heroId: result.chatter.hero_id },
+    chatter: serializeChatter(result.chatter),
+    hero: mapped,
   });
 });
 
 router.delete("/:id/hero", (req, res) => {
-  const result = unassignHero(Number(req.params.id));
-  if (!result.ok) {
-    res.status(404).json({ success: false, error: result.error });
+  const chatter = getChatterById(Number(req.params.id));
+  if (!chatter) {
+    res.status(404).json({ success: false, error: "Chatter not found" });
     return;
   }
 
-  emitToClients("chatter_updated", {
-    chatterId: result.chatter.id,
-    chatter: serializeChatter(result.chatter),
-    timestamp: Date.now(),
-  });
+  const result = resetPersonalHero(chatter);
+  emitHeroSaved(result.hero);
+  emitHeroChange(result.chatter, result.hero);
   res.json({
     success: true,
-    chatter: { id: result.chatter.id, heroId: null },
+    chatter: serializeChatter(result.chatter),
+    hero: serializeHero(result.hero),
   });
 });
 

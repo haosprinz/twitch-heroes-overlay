@@ -134,39 +134,6 @@ function migrate(database: SqliteDatabase): void {
   }
 }
 
-function seedHeroes(database: SqliteDatabase): void {
-  const count = database.prepare("SELECT COUNT(*) AS total FROM heroes").get() as {
-    total: number;
-  };
-  if (count.total > 0) return;
-  const insert = database.prepare(
-    `INSERT INTO heroes (name, gif_url, bubble_color, font_color, config)
-     VALUES (?, ?, ?, ?, ?)`,
-  );
-  insert.run(
-    "odin",
-    "/uploads/gifs/odin.gif",
-    "#9146FF",
-    "#ffffff",
-    stringifyHeroConfig({ ...defaultHeroConfig("odin"), shirtColor: "#9146FF", hat: "crown" }),
-  );
-  insert.run(
-    "thor",
-    "/uploads/gifs/thor.gif",
-    "#00AEFF",
-    "#ffffff",
-    stringifyHeroConfig({ ...defaultHeroConfig("thor"), shirtColor: "#00AEFF", hair: "long", hairColor: "#c9a227" }),
-  );
-  insert.run(
-    "loki",
-    "/uploads/gifs/loki.gif",
-    "#00ff00",
-    "#000000",
-    stringifyHeroConfig({ ...defaultHeroConfig("loki"), shirtColor: "#2ecc71", hair: "spiky" }),
-  );
-  console.log("Seeded placeholder heroes: odin, thor, loki");
-}
-
 export function getDb(): SqliteDatabase {
   if (db) return db;
 
@@ -179,6 +146,5 @@ export function getDb(): SqliteDatabase {
   db.pragma("journal_mode = WAL");
   db.pragma("foreign_keys = ON");
   migrate(db);
-  seedHeroes(db);
   return db;
 }

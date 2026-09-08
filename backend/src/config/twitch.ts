@@ -5,6 +5,8 @@ export type TwitchConfig = {
   broadcasterId: string;
   eventSubWsUrl: string;
   scopes: string[];
+  extensionSecret: string;
+  extensionDevBypass: boolean;
 };
 
 export function getTwitchConfig(): TwitchConfig {
@@ -26,5 +28,15 @@ export function getTwitchConfig(): TwitchConfig {
       "user:bot",
       "channel:bot",
     ],
+    extensionSecret: process.env.TWITCH_EXTENSION_SECRET || "",
+    extensionDevBypass:
+      process.env.EXTENSION_DEV_BYPASS === "1" ||
+      process.env.EXTENSION_DEV_BYPASS === "true" ||
+      (!process.env.TWITCH_EXTENSION_SECRET &&
+        (process.env.NODE_ENV || "development") !== "production"),
   };
+}
+
+export function isExtensionConfigured(): boolean {
+  return Boolean(getTwitchConfig().extensionSecret);
 }

@@ -5,16 +5,14 @@ import {
   deleteGifFile,
 } from "../config/upload.js";
 import {
-  createHero,
   deleteHero,
   getHeroById,
-  listHeroes,
+  listPersonalHeroes,
   serializeHero,
   updateHero,
 } from "../models/Hero.js";
+import { emitHeroMutation, emitHeroSaved } from "../services/heroEvents.js";
 import { parseHeroConfig } from "../services/heroAppearance.js";
-import { emitToClients } from "../services/realtime.js";
-import { getOverlayState } from "../services/overlayState.js";
 import type { HeroPatch } from "../types.js";
 
 const router = Router();
@@ -43,15 +41,15 @@ function heroFieldsFromBody(
 ): Omit<HeroPatch, "gifUrl"> & { name?: string } {
   return {
     name: body?.name != null ? String(body.name).trim() : defaults.name,
-    width: optionalInt(body?.width, defaults.width ?? 200),
-    height: optionalInt(body?.height, defaults.height ?? 200),
-    activeWidth: optionalInt(body?.activeWidth, defaults.activeWidth ?? 300),
-    activeHeight: optionalInt(body?.activeHeight, defaults.activeHeight ?? 300),
+    width: optionalInt(body?.width, defaults.width ?? 160),
+    height: optionalInt(body?.height, defaults.height ?? 220),
+    activeWidth: optionalInt(body?.activeWidth, defaults.activeWidth ?? 180),
+    activeHeight: optionalInt(body?.activeHeight, defaults.activeHeight ?? 240),
     bubbleColor:
       (typeof body?.bubbleColor === "string" && body.bubbleColor) ||
       defaults.bubbleColor ||
       "#ffffff",
-    fontSize: optionalInt(body?.fontSize, defaults.fontSize ?? 18),
+    fontSize: optionalInt(body?.fontSize, defaults.fontSize ?? 16),
     fontColor:
       (typeof body?.fontColor === "string" && body.fontColor) ||
       defaults.fontColor ||
@@ -60,54 +58,31 @@ function heroFieldsFromBody(
       body?.bubbleDuration,
       defaults.bubbleDuration ?? 5000,
     ),
-    config: body?.config != null ? parseHeroConfig(body.config, String(body?.name || defaults.name || "Герой")) : undefined,
+    config:
+      body?.config != null
+        ? parseHeroConfig(body.config, String(body?.name || defaults.name || "Герой"))
+        : undefined,
   };
 }
 
-function emitHeroEvent(event: string, payload: Record<string, unknown>): void {
-  emitToClients(event, { ...payload, timestamp: Date.now() });
-  emitToClients("overlay_state", { ...getOverlayState(), timestamp: Date.now() });
-}
-
 router.get("/", (_req, res) => {
-  res.json({ success: true, heroes: listHeroes().map(serializeHero) });
+  res.json({ success: true, heroes: listPersonalHeroes().map(serializeHero) });
 });
 
 router.get("/:id", (req, res) => {
   const hero = getHeroById(Number(req.params.id));
-  if (!hero) {
+  if (!hero || hero.user_id == null) {
     res.status(404).json({ success: false, error: "Hero not found" });
     return;
   }
   res.json({ success: true, hero: serializeHero(hero) });
 });
 
-router.post("/", gifUpload.single("gif"), (req, res) => {
-  const body = (req.body ?? {}) as Record<string, unknown>;
-  const name = String(body.name || "").trim();
-  if (!name) {
-    if (req.file) deleteGifFile(publicGifUrl(req.file.filename));
-    res.status(400).json({ success: false, error: "name is required" });
-    return;
-  }
-
-  const fields = heroFieldsFromBody(body);
-  const hero = createHero({
-    name,
-    gifUrl: req.file ? publicGifUrl(req.file.filename) : "",
-    width: fields.width ?? 160,
-    height: fields.height ?? 220,
-    activeWidth: fields.activeWidth ?? 180,
-    activeHeight: fields.activeHeight ?? 240,
-    bubbleColor: fields.bubbleColor ?? "#ffffff",
-    fontSize: fields.fontSize ?? 16,
-    fontColor: fields.fontColor ?? "#111111",
-    bubbleDuration: fields.bubbleDuration ?? 5000,
-    config: fields.config,
+router.post("/", (_req, res) => {
+  res.status(400).json({
+    success: false,
+    error: "Personal heroes are created automatically for each user",
   });
-  const mapped = serializeHero(hero);
-  emitHeroEvent("hero_created", { hero: mapped });
-  res.status(201).json({ success: true, hero: mapped });
 });
 
 function applyHeroUpdate(
@@ -126,10 +101,7 @@ function applyHeroUpdate(
     fontColor: current.font_color,
     bubbleDuration: current.bubble_duration,
   });
-  if (!fields.name) {
-    return { error: "name is required" as const };
-  }
-  const hero = updateHero(current.id, { ...fields, gifUrl });
+  const hero = updateHero(current.id, { ...fields, gifUrl, userId: current.user_id });
   return { hero };
 }
 
@@ -142,7 +114,7 @@ router.put("/:id", (req, res, next) => {
   next();
 }, (req, res) => {
   const current = getHeroById(Number(req.params.id));
-  if (!current) {
+  if (!current || current.user_id == null) {
     if (req.file) deleteGifFile(publicGifUrl(req.file.filename));
     res.status(404).json({ success: false, error: "Hero not found" });
     return;
@@ -156,25 +128,28 @@ router.put("/:id", (req, res, next) => {
   }
 
   const result = applyHeroUpdate(current, body, gifUrl);
-  if ("error" in result) {
+  if (!result.hero) {
     if (req.file) deleteGifFile(publicGifUrl(req.file.filename));
-    res.status(400).json({ success: false, error: result.error });
+    res.status(400).json({ success: false, error: "Failed to update hero" });
     return;
   }
 
-  const mapped = serializeHero(result.hero);
-  emitHeroEvent("hero_updated", { hero: mapped });
-  res.json({ success: true, hero: mapped });
+  res.json({ success: true, hero: emitHeroSaved(result.hero) });
 });
 
 router.delete("/:id", (req, res) => {
-  const hero = deleteHero(Number(req.params.id));
+  const current = getHeroById(Number(req.params.id));
+  if (!current) {
+    res.status(404).json({ success: false, error: "Hero not found" });
+    return;
+  }
+  const hero = deleteHero(current.id);
   if (!hero) {
     res.status(404).json({ success: false, error: "Hero not found" });
     return;
   }
   if (hero.gif_url) deleteGifFile(hero.gif_url);
-  emitHeroEvent("hero_deleted", { heroId: hero.id });
+  emitHeroMutation("hero_deleted", { heroId: hero.id });
   res.json({ success: true, message: "Hero deleted successfully" });
 });
 

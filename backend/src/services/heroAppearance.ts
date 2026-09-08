@@ -57,7 +57,7 @@ export function randomHeroConfig(name = "Герой"): HeroConfig {
     glasses: pick(GLASSES),
     shirtColor: pick(SHIRTS),
     pantsColor: pick(PANTS),
-    size: Number((0.85 + Math.random() * 0.4).toFixed(2)),
+    size: 1,
     speed: Number((0.7 + Math.random() * 0.8).toFixed(2)),
   };
 }
@@ -90,7 +90,7 @@ export function parseHeroConfig(raw: unknown, fallbackName = "Герой"): Hero
     glasses: GLASSES.includes(glasses) ? glasses : base.glasses,
     shirtColor: String(data.shirtColor || base.shirtColor),
     pantsColor: String(data.pantsColor || base.pantsColor),
-    size: clamp(Number(data.size ?? base.size), 0.6, 1.8),
+    size: 1,
     speed: clamp(Number(data.speed ?? base.speed), 0.4, 2.2),
   };
 }

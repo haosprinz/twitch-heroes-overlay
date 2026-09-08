@@ -10,7 +10,7 @@ copy .env.example .env
 npm run dev
 ```
 
-http://localhost:3000 — REST `/api`, Socket.io, статика `/uploads/gifs`.
+http://localhost:3000 — REST `/api` (включая `/api/me/hero` для расширения), Socket.io, статика `/uploads/gifs`.
 
 ## Twitch OAuth
 

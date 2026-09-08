@@ -202,3 +202,25 @@ export async function restoreAuthFromDb(): Promise<boolean> {
     return false;
   }
 }
+
+export async function lookupTwitchUser(userId: string): Promise<{
+  twitchId: string;
+  username: string;
+  displayName: string;
+  profileImageUrl: string | null;
+} | null> {
+  if (!userId || !apiClient) return null;
+  try {
+    const user = await apiClient.users.getUserById(userId);
+    if (!user) return null;
+    return {
+      twitchId: user.id,
+      username: user.name,
+      displayName: user.displayName,
+      profileImageUrl: user.profilePictureUrl || null,
+    };
+  } catch (error) {
+    console.error("Failed to look up Twitch user:", error);
+    return null;
+  }
+}

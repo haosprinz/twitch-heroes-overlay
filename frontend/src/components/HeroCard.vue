@@ -7,18 +7,11 @@ defineProps<{
   active?: boolean;
   status?: HeroStatus;
 }>();
-
-const labels: Record<HeroStatus, string> = {
-  patrol: "патрулирование",
-  duel: "в дуэли",
-  lying: "лежит",
-};
 </script>
 
 <template>
   <div class="hero-card">
     <DrawnHero :hero="hero" :pose="status === 'lying' ? 'lie' : active ? 'ready' : 'idle'" />
-    <div v-if="status" class="hero-card__status">{{ labels[status] }}</div>
   </div>
 </template>
 

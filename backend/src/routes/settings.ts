@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { getPublicSettings, setSettings } from "../models/Settings.js";
 import { isEventSubConnected } from "../services/chatService.js";
+import { getTwitchConfig, isExtensionConfigured } from "../config/twitch.js";
 import { isTwitchConfigured } from "../services/twitchService.js";
 import type { PublicSettings } from "../types.js";
 
@@ -17,6 +18,8 @@ function withFlags(settings: PublicSettings) {
     ...settings,
     twitch_configured: isTwitchConfigured(),
     eventsub_enabled: isEventSubConnected(),
+    extension_configured: isExtensionConfigured(),
+    extension_dev_bypass: getTwitchConfig().extensionDevBypass,
   };
 }
 

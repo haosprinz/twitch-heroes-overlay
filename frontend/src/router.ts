@@ -3,6 +3,7 @@ import OverlayView from "@/views/OverlayView.vue";
 import HeroesAdminView from "@/views/HeroesAdminView.vue";
 import ChattersView from "@/views/ChattersView.vue";
 import TestPlaygroundView from "@/views/TestPlaygroundView.vue";
+import ExtensionPreviewView from "@/views/ExtensionPreviewView.vue";
 import AuthCallback from "@/views/AuthCallback.vue";
 import HomeView from "@/views/HomeView.vue";
 
@@ -18,6 +19,7 @@ const router = createRouter({
     },
     { path: "/admin", name: "admin", component: HeroesAdminView },
     { path: "/test", name: "test", component: TestPlaygroundView },
+    { path: "/extension", name: "extension", component: ExtensionPreviewView },
     { path: "/chatters", name: "chatters", component: ChattersView },
     { path: "/auth/callback", name: "auth-callback", component: AuthCallback },
   ],

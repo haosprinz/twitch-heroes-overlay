@@ -27,24 +27,27 @@ export function useChatters() {
     };
   }
 
-  async function assignHero(chatterId: number, heroId: number) {
+  async function updateChatterHero(
+    chatterId: number,
+    payload: Record<string, unknown>,
+  ) {
     const response = await fetch(`${appStore.apiUrl}/api/chatters/${chatterId}/hero`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ heroId }),
+      body: JSON.stringify(payload),
     });
     const data = await response.json();
-    assertOk(data, "Failed to assign hero");
-    return data.chatter as { id: number; heroId: number };
+    assertOk(data, "Failed to update hero");
+    return data;
   }
 
-  async function removeHero(chatterId: number) {
+  async function resetHero(chatterId: number) {
     const response = await fetch(`${appStore.apiUrl}/api/chatters/${chatterId}/hero`, {
       method: "DELETE",
     });
     const data = await response.json();
-    assertOk(data, "Failed to remove hero");
-    return data.chatter as { id: number; heroId: null };
+    assertOk(data, "Failed to reset hero");
+    return data;
   }
 
   async function ensureHero(chatterId: number) {
@@ -68,5 +71,5 @@ export function useChatters() {
     return data.chatter as { id: number };
   }
 
-  return { fetchChatters, assignHero, removeHero, ensureHero, deleteChatter };
+  return { fetchChatters, updateChatterHero, resetHero, ensureHero, deleteChatter };
 }

@@ -29,6 +29,18 @@ export function listHeroes(): HeroRow[] {
   return getDb().prepare("SELECT * FROM heroes ORDER BY id ASC").all() as HeroRow[];
 }
 
+export function listPersonalHeroes(): HeroRow[] {
+  return getDb()
+    .prepare("SELECT * FROM heroes WHERE user_id IS NOT NULL ORDER BY id ASC")
+    .all() as HeroRow[];
+}
+
+export function listUnownedHeroes(): HeroRow[] {
+  return getDb()
+    .prepare("SELECT * FROM heroes WHERE user_id IS NULL ORDER BY id ASC")
+    .all() as HeroRow[];
+}
+
 export function getHeroById(id: number): HeroRow | undefined {
   return getDb().prepare("SELECT * FROM heroes WHERE id = ?").get(id) as
     | HeroRow

@@ -10,7 +10,8 @@ alwaysApply: false
 
 - Точка входа: `backend/src/server.ts`, порт `3000`
 - Схема таблиц и имена колонок — как в PLAN.md, без самовольных полей
-- REST: `/api/auth`, `/api/heroes`, `/api/chatters`, `/api/stats`, `/api/settings`, `/api/upload`
+- REST: `/api/auth`, `/api/me`, `/api/heroes`, `/api/chatters`, `/api/stats`, `/api/settings`, `/api/upload`
+- `/api/me/hero` — GET не создаёт; POST создаёт; JWT расширения или локальный `Bearer dev`
 - Ответ всегда `{ success: true|false, ... }`; ошибки через `errorHandler`
 - Socket-события (`new_message`, `hero_assigned`, `test_message`, …) — имена из плана, без переименований
 - Токены Twitch хранятся в таблице `settings`, не в git и не в клиенте

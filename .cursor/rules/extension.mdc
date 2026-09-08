@@ -1,0 +1,16 @@
+---
+description: Twitch Extension panel conventions
+globs: extension/**
+alwaysApply: false
+---
+
+# Extension
+
+Стек и контракт — в [PLAN.md](PLAN.md): Vue 3, TypeScript, Vite, Twitch Extension Helper.
+
+- Точка входа панели: `extension/index.html`, порт `5174`
+- Config: `extension/config.html`
+- EBS: `GET/POST/PATCH /api/me/hero` через `VITE_EBS_URL`
+- JWT из `Twitch.ext.onAuthorized`; числовой id — только после Identity Link
+- Без Helper (локальный браузер) — `Bearer dev` и тестовый пользователь
+- Не тащить Vuetify и админские CRUD в панель

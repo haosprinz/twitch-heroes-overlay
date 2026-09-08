@@ -23,14 +23,15 @@ const confirmDelete = ref<Hero | null>(null);
 function statusLabel(hero: Hero) {
   if (hero.status === "duel") return "в дуэли";
   if (hero.status === "lying") return "лежит";
-  return "патрулирование";
+  return "Гуляет";
 }
 
 onMounted(async () => {
   try {
     heroStore.setHeroes(await fetchHeroes());
   } catch (err) {
-    error.value = err instanceof Error ? err.message : "Не удалось загрузить героев";
+    error.value =
+      err instanceof Error ? err.message : "Не удалось загрузить героев";
   }
   openFromQuery();
 });
@@ -53,7 +54,9 @@ function openEdit(hero: Hero) {
   dialog.value = true;
 }
 
-async function save(payload: { name: string; config: HeroConfig } & Record<string, unknown>) {
+async function save(
+  payload: { name: string; config: HeroConfig } & Record<string, unknown>,
+) {
   if (!editing.value) return;
   saving.value = true;
   error.value = "";
@@ -65,7 +68,8 @@ async function save(payload: { name: string; config: HeroConfig } & Record<strin
       await router.replace({ path: "/admin" });
     }
   } catch (err) {
-    error.value = err instanceof Error ? err.message : "Не удалось сохранить героя";
+    error.value =
+      err instanceof Error ? err.message : "Не удалось сохранить героя";
   } finally {
     saving.value = false;
   }
@@ -78,7 +82,8 @@ async function confirmRemove() {
     heroStore.removeHero(confirmDelete.value.id);
     confirmDelete.value = null;
   } catch (err) {
-    error.value = err instanceof Error ? err.message : "Не удалось удалить героя";
+    error.value =
+      err instanceof Error ? err.message : "Не удалось удалить героя";
   }
 }
 </script>
@@ -89,38 +94,56 @@ async function confirmRemove() {
       <div>
         <h1 class="text-h4">Герои</h1>
         <p class="text-medium-emphasis mt-1">
-          Рисованные человечки. Дуэли запускаются только командой <code>\duel ник</code> в чате.
+          У каждого свой герой. Владелец канала может изменить любого. Зритель
+          меняет своего в расширении.
         </p>
       </div>
     </div>
-    <v-alert v-if="error && !dialog" type="error" class="mb-4">{{ error }}</v-alert>
+    <v-alert v-if="error && !dialog" type="error" class="mb-4">{{
+      error
+    }}</v-alert>
     <v-row>
-      <v-col v-for="hero in heroStore.heroes" :key="hero.id" cols="12" sm="6" md="4">
+      <v-col
+        v-for="hero in heroStore.heroes"
+        :key="hero.id"
+        cols="12"
+        sm="6"
+        md="4"
+      >
         <v-card>
           <v-card-title class="d-flex align-center">
             {{ hero.username || hero.name }}
             <v-spacer />
-            <v-chip size="small" variant="tonal">{{ statusLabel(hero) }}</v-chip>
+            <v-chip size="small" variant="tonal">{{
+              statusLabel(hero)
+            }}</v-chip>
           </v-card-title>
           <v-card-text>
             <HeroCard :hero="hero" :status="hero.status" />
           </v-card-text>
           <v-card-actions>
             <v-btn variant="text" @click="openEdit(hero)">Изменить</v-btn>
-            <v-btn color="error" variant="text" @click="confirmDelete = hero">Удалить</v-btn>
+            <v-btn color="error" variant="text" @click="confirmDelete = hero"
+              >Удалить</v-btn
+            >
           </v-card-actions>
         </v-card>
       </v-col>
       <v-col v-if="!heroStore.heroes.length" cols="12">
         <v-alert type="info">
-          Героев пока нет. Они появятся после первого сообщения в чате или команды \duel.
+          Героев пока нет. Они появятся после первого сообщения в чате или
+          команды \duel.
         </v-alert>
       </v-col>
     </v-row>
 
     <v-dialog v-model="dialog" max-width="780">
       <v-card>
-        <v-card-title>{{ editing ? `Редактировать ${editing.username || editing.name}` : "Герой" }}</v-card-title>
+        <v-card-title>{{
+          editing
+            ? `Редактировать ${editing.username || editing.name}`
+            : "Герой"
+        }}</v-card-title>
         <v-card-text>
           <HeroForm
             :hero="editing"
@@ -133,11 +156,20 @@ async function confirmRemove() {
       </v-card>
     </v-dialog>
 
-    <v-dialog :model-value="Boolean(confirmDelete)" max-width="420" @update:model-value="(open) => { if (!open) confirmDelete = null }">
+    <v-dialog
+      :model-value="Boolean(confirmDelete)"
+      max-width="420"
+      @update:model-value="
+        (open) => {
+          if (!open) confirmDelete = null;
+        }
+      "
+    >
       <v-card v-if="confirmDelete">
         <v-card-title>Удалить героя?</v-card-title>
         <v-card-text>
-          {{ confirmDelete.name }} будет удалён. У пользователя герой снимется; при следующей дуэли создастся новый.
+          {{ confirmDelete.name }} будет удалён. У пользователя герой снимется;
+          при следующей дуэли создастся новый.
         </v-card-text>
         <v-card-actions>
           <v-spacer />

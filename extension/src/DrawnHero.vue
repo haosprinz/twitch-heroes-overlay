@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from "vue";
-import { defaultHeroConfig, type Hero, type HeroConfig } from "@/types/hero";
+import { defaultHeroConfig, type Hero, type HeroConfig } from "./types";
 
 const props = defineProps<{
   hero?: Hero | null;
@@ -53,15 +53,14 @@ const pose = computed(() => props.pose || "walk");
             <ellipse
               v-if="look.hair === 'short'"
               cx="40"
-              cy="20"
-              rx="8"
-              ry="8"
+              cy="22"
+              rx="16"
+              ry="10"
               :fill="look.hairColor"
             />
             <path
               v-if="look.hair === 'long'"
               d="M24 34 q0-22 16-22 q16 0 16 22 v18 h-8 v-14 h-16 v14 h-8 z"
-              transform="translate(-8, -2) scale(1.2,1)"
               :fill="look.hairColor"
             />
             <path
@@ -69,6 +68,10 @@ const pose = computed(() => props.pose || "walk");
               d="M22 32 l8-16 6 10 4-14 6 14 6-12 6 18 z"
               :fill="look.hairColor"
             />
+            <g v-if="look.hair === 'ponytail'">
+              <ellipse cx="40" cy="22" rx="15" ry="9" :fill="look.hairColor" />
+              <path d="M26 28 q-18 8 -8 28" fill="none" :stroke="look.hairColor" stroke-width="6" stroke-linecap="round" />
+            </g>
           </g>
           <g v-if="look.glasses !== 'none'" fill="none" stroke="#222" stroke-width="2">
             <rect v-if="look.glasses === 'square'" x="26" y="31" width="12" height="10" rx="1" />
@@ -81,7 +84,7 @@ const pose = computed(() => props.pose || "walk");
             <path v-if="look.hat === 'cap'" d="M22 24 h36 v6 h-36 z" fill="#c0392b" />
             <path v-if="look.hat === 'cap'" d="M22 24 q18-16 36 0" fill="#c0392b" />
             <path v-if="look.hat === 'beanie'" d="M24 26 q16-18 32 0 v6 h-32 z" fill="#2980b9" />
-            <g v-if="look.hat === 'crown'" transform="translate(0, -12)">
+            <g v-if="look.hat === 'crown'" transform="translate(0, -10)">
               <path d="M22 24 l8 10 10-12 10 12 8-10 v16 h-36 z" fill="#f1c40f" />
             </g>
           </g>

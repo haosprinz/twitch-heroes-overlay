@@ -8,6 +8,8 @@ export interface PublicSettings {
   twitch_profile_image_url?: string;
   twitch_configured?: boolean;
   eventsub_enabled?: boolean;
+  extension_configured?: boolean;
+  extension_dev_bypass?: boolean;
   [key: string]: string | boolean | undefined;
 }
 

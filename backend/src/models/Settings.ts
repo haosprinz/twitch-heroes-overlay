@@ -1,9 +1,12 @@
 import { getDb } from "../config/database.js";
 import type { PublicSettings, SettingsMap } from "../types.js";
 
-const SECRET_SETTING_KEYS = new Set([
-  "twitch_access_token",
-  "twitch_refresh_token",
+const PUBLIC_SETTING_KEYS = new Set([
+  "twitch_broadcaster_id",
+  "twitch_username",
+  "twitch_display_name",
+  "twitch_profile_image_url",
+  "eventsub_enabled",
 ]);
 
 type SettingRow = { key: string; value: string | null };
@@ -41,9 +44,8 @@ export function setSettings(entries: Record<string, string | number | boolean | 
 export function getPublicSettings(): PublicSettings {
   const all = getAllSettings();
   const publicSettings: PublicSettings = {};
-  for (const [key, value] of Object.entries(all)) {
-    if (SECRET_SETTING_KEYS.has(key)) continue;
-    publicSettings[key] = value;
+  for (const key of PUBLIC_SETTING_KEYS) {
+    if (key in all) publicSettings[key] = all[key];
   }
   publicSettings.eventsub_enabled = all.eventsub_enabled === "true";
   return publicSettings;

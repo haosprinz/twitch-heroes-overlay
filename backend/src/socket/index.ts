@@ -1,8 +1,8 @@
 import type { Server as SocketServer } from "socket.io";
-import { getEventSubStatus, emitHeroChange } from "../services/chatService.js";
-import { assignHero, serializeChatter } from "../services/heroAssignment.js";
+import { getEventSubStatus } from "../services/chatService.js";
+import { serializeChatter } from "../services/heroAssignment.js";
 import { listChatters } from "../models/Chatter.js";
-import { listHeroes, serializeHero } from "../models/Hero.js";
+import { listPersonalHeroes, serializeHero } from "../models/Hero.js";
 import { getStatsSnapshot } from "../services/statsService.js";
 import { startTestDuel } from "../services/duelService.js";
 import { getOverlayState } from "../services/overlayState.js";
@@ -47,7 +47,7 @@ export function createSocket(io: SocketServer): SocketServer {
 
     socket.on("request_heroes", () => {
       socket.emit("heroes_list", {
-        heroes: listHeroes().map(serializeHero),
+        heroes: listPersonalHeroes().map(serializeHero),
         timestamp: Date.now(),
       });
     });
@@ -70,17 +70,12 @@ export function createSocket(io: SocketServer): SocketServer {
       });
     });
 
-    socket.on("assign_hero", (payload: AssignHeroPayload = {}) => {
-      const result = assignHero(Number(payload.chatterId), Number(payload.heroId));
-      if (!result.ok) {
-        socket.emit("system_message", {
-          message: result.error,
-          type: "error",
-          timestamp: Date.now(),
-        });
-        return;
-      }
-      emitHeroChange(result.chatter, result.hero);
+    socket.on("assign_hero", (_payload: AssignHeroPayload = {}) => {
+      socket.emit("system_message", {
+        message: "Герой личный. Меняйте внешность в админке или расширении.",
+        type: "error",
+        timestamp: Date.now(),
+      });
     });
 
     socket.on("test_message", (payload: TestMessagePayload = {}) => {

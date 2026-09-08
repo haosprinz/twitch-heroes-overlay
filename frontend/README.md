@@ -14,4 +14,5 @@ npm run dev
 |---|---|
 | Overlay (OBS) | http://localhost:5173/overlay |
 | Админка героев | http://localhost:5173/admin |
+| Предпросмотр расширения | http://localhost:5173/extension |
 | Пользователи | http://localhost:5173/chatters |

@@ -41,7 +41,8 @@ async function load() {
     const result = await fetchChatters(page.value, limit.value, search.value);
     chatterStore.setChatters(result.chatters, result.pagination);
   } catch (err) {
-    error.value = err instanceof Error ? err.message : "Не удалось загрузить пользователей";
+    error.value =
+      err instanceof Error ? err.message : "Не удалось загрузить пользователей";
   } finally {
     loading.value = false;
   }
@@ -60,7 +61,7 @@ function scoreOf(item: Chatter) {
 function statusOf(item: Chatter) {
   if (item.status === "duel" || item.inDuel) return "в дуэли";
   if (item.status === "lying") return "лежит";
-  return "патрулирование";
+  return "гуляет";
 }
 
 function onRowClick(_event: unknown, row: { item: Chatter }) {
@@ -78,7 +79,8 @@ async function openHero(chatter: Chatter) {
       await router.push({ path: "/admin", query: { heroId: String(heroId) } });
     }
   } catch (err) {
-    error.value = err instanceof Error ? err.message : "Не удалось открыть героя";
+    error.value =
+      err instanceof Error ? err.message : "Не удалось открыть героя";
   }
 }
 
@@ -89,7 +91,8 @@ async function removeUser(chatter: Chatter) {
     confirmDelete.value = null;
     await load();
   } catch (err) {
-    error.value = err instanceof Error ? err.message : "Не удалось удалить пользователя";
+    error.value =
+      err instanceof Error ? err.message : "Не удалось удалить пользователя";
   } finally {
     saving.value = false;
   }
@@ -121,7 +124,8 @@ onMounted(async () => {
   <v-container>
     <h1 class="text-h4 mb-2">Пользователи</h1>
     <p class="text-medium-emphasis mb-4">
-      Счёт — победы:поражения. Клик по строке открывает героя. Дуэли только через <code>\duel ник</code>.
+      Счёт — победы:поражения. Клик по строке открывает героя. Дуэли только
+      через <code>\duel ник</code>.
     </p>
     <v-text-field
       v-model="search"
@@ -158,8 +162,15 @@ onMounted(async () => {
         {{ formatDate(item.lastSeen) }}
       </template>
       <template #item.actions="{ item }">
-        <v-btn size="small" variant="text" @click.stop="openHero(item)">Герой</v-btn>
-        <v-btn size="small" variant="text" color="error" @click.stop="confirmDelete = item">
+        <v-btn size="small" variant="text" @click.stop="openHero(item)"
+          >Герой</v-btn
+        >
+        <v-btn
+          size="small"
+          variant="text"
+          color="error"
+          @click.stop="confirmDelete = item"
+        >
           Удалить
         </v-btn>
       </template>
@@ -168,16 +179,30 @@ onMounted(async () => {
       </template>
     </v-data-table-server>
 
-    <v-dialog :model-value="Boolean(confirmDelete)" max-width="420" @update:model-value="(open) => { if (!open) confirmDelete = null }">
+    <v-dialog
+      :model-value="Boolean(confirmDelete)"
+      max-width="420"
+      @update:model-value="
+        (open) => {
+          if (!open) confirmDelete = null;
+        }
+      "
+    >
       <v-card v-if="confirmDelete">
         <v-card-title>Удалить пользователя?</v-card-title>
         <v-card-text>
-          {{ confirmDelete.displayName || confirmDelete.username }} будет удалён вместе с историей сообщений и дуэлей.
+          {{ confirmDelete.displayName || confirmDelete.username }} будет удалён
+          вместе с историей сообщений и дуэлей.
         </v-card-text>
         <v-card-actions>
           <v-spacer />
           <v-btn variant="text" @click="confirmDelete = null">Отмена</v-btn>
-          <v-btn color="error" :loading="saving" @click="removeUser(confirmDelete)">Удалить</v-btn>
+          <v-btn
+            color="error"
+            :loading="saving"
+            @click="removeUser(confirmDelete)"
+            >Удалить</v-btn
+          >
         </v-card-actions>
       </v-card>
     </v-dialog>

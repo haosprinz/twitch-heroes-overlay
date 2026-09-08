@@ -1,0 +1,22 @@
+{
+  "name": "twitch-heroes-extension",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Twitch panel extension — viewer edits their personal hero",
+  "scripts": {
+    "dev": "vite --host",
+    "build": "vue-tsc -b && vite build",
+    "preview": "vite preview --host --port 5174"
+  },
+  "dependencies": {
+    "vue": "^3.5.17"
+  },
+  "devDependencies": {
+    "@types/node": "^26.4.1",
+    "@vitejs/plugin-vue": "^5.2.4",
+    "typescript": "^5.8.3",
+    "vite": "^6.3.5",
+    "vue-tsc": "^2.2.10"
+  }
+}

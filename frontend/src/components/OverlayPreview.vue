@@ -4,7 +4,9 @@ import type { HeroActivation } from "@/stores/chatStore";
 import type { ActiveDuel } from "@/types/duel";
 import type { OverlaySlot } from "@/types/overlay";
 
-const background = defineModel<"checker" | "dark">("background", { default: "checker" });
+const background = defineModel<"checker" | "dark">("background", {
+  default: "checker",
+});
 
 defineProps<{
   idle?: boolean;
@@ -20,7 +22,12 @@ defineProps<{
     <v-card-title class="d-flex align-center">
       Предпросмотр оверлея
       <v-spacer />
-      <v-btn-toggle v-model="background" density="compact" mandatory variant="outlined">
+      <v-btn-toggle
+        v-model="background"
+        density="compact"
+        mandatory
+        variant="outlined"
+      >
         <v-btn value="checker" size="small">Шахматка</v-btn>
         <v-btn value="dark" size="small">Тёмный стрим</v-btn>
       </v-btn-toggle>
@@ -52,7 +59,7 @@ defineProps<{
 
 .preview__stage {
   position: relative;
-  height: 240px;
+  height: 400px;
   overflow: hidden;
   border-radius: 8px;
 }
@@ -65,7 +72,11 @@ defineProps<{
     linear-gradient(45deg, transparent 75%, #bdbdbd 75%),
     linear-gradient(-45deg, transparent 75%, #bdbdbd 75%);
   background-size: 24px 24px;
-  background-position: 0 0, 0 12px, 12px -12px, -12px 0;
+  background-position:
+    0 0,
+    0 12px,
+    12px -12px,
+    -12px 0;
 }
 
 .preview__stage--dark {
